@@ -4,6 +4,8 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,10 +17,13 @@ import fr.election.checkin.repository.BulletinRepository;
 import fr.election.checkin.repository.EmargementIsoloirRepository;
 import fr.election.checkin.repository.InscriptionRepository;
 import fr.election.checkin.repository.JournalCheckinRepository;
+import fr.election.checkin.repository.UtilisateurRepository;
 import fr.election.checkin.service.QrTokenService.Verification;
 
 @Service
 public class CheckinService {
+
+	private static final Logger log = LoggerFactory.getLogger(CheckinService.class);
 
 	// Statut du votant, tel qu'exposé à l'appli
 	public enum StatutVotant { not_voted, voted_app, checked_in_isoloir, not_registered }
@@ -33,16 +38,18 @@ public class CheckinService {
 	private final BulletinRepository bulletinRepository;
 	private final EmargementIsoloirRepository emargementRepository;
 	private final JournalCheckinRepository journalRepository;
+	private final UtilisateurRepository utilisateurRepository;
 	private final Clock clock;
 
 	public CheckinService(QrTokenService qrTokenService, InscriptionRepository inscriptionRepository,
 			BulletinRepository bulletinRepository, EmargementIsoloirRepository emargementRepository,
-			JournalCheckinRepository journalRepository, Clock clock) {
+			JournalCheckinRepository journalRepository, UtilisateurRepository utilisateurRepository, Clock clock) {
 		this.qrTokenService = qrTokenService;
 		this.inscriptionRepository = inscriptionRepository;
 		this.bulletinRepository = bulletinRepository;
 		this.emargementRepository = emargementRepository;
 		this.journalRepository = journalRepository;
+		this.utilisateurRepository = utilisateurRepository;
 		this.clock = clock;
 	}
 
@@ -122,6 +129,17 @@ public class CheckinService {
 	private Reponse journaliser(Integer idUtilisateur, Integer idIsoloir, LocalDateTime maintenant,
 			ResultatCheckin resultat, String message) {
 		journalRepository.save(new JournalCheckin(idUtilisateur, idIsoloir, maintenant, resultat.name()));
+
+		// Visible uniquement dans le terminal du serveur (jamais sur la tablette)
+		String votant = utilisateurRepository.findById(idUtilisateur)
+			.map(u -> idUtilisateur + " (" + u.getEmail() + ")")
+			.orElse(idUtilisateur.toString());
+		String isoloir = idIsoloir == null ? "inconnu" : idIsoloir.toString();
+		if (resultat == ResultatCheckin.success) {
+			log.info("Check-in OK : votant {} dans l'isoloir {}", votant, isoloir);
+		} else {
+			log.warn("Check-in refusé ({}) : votant {}, isoloir {}", resultat, votant, isoloir);
+		}
 		return new Reponse(resultat, message);
 	}
 
