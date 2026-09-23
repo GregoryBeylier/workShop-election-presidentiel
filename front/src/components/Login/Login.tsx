@@ -36,7 +36,9 @@ function Login() {
           onSubmit={handleSubmit}
           className="bg-white rounded-xl shadow p-8 w-96 flex flex-col gap-4"
         >
-          <h1 className="text-2xl font-semibold">Connexion</h1>
+          <h1 className="text-2xl font-heading font-bold text-brand-dark">
+            Connexion
+          </h1>
 
           <div className="flex flex-col gap-1">
             <label htmlFor="email" className="text-sm text-gray-700">
@@ -48,7 +50,7 @@ function Login() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="border border-gray-300 rounded-md py-2 px-4 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border border-gray-300 rounded-md py-2 px-4 w-full focus:outline-none focus:ring-2 focus:ring-brand-teal"
             />
           </div>
 
@@ -63,7 +65,7 @@ function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="border border-gray-300 rounded-md py-2 px-4 w-full pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="border border-gray-300 rounded-md py-2 px-4 w-full pr-10 focus:outline-none focus:ring-2 focus:ring-brand-teal"
               />
               <button
                 type="button"
@@ -89,7 +91,7 @@ function Login() {
 
           <button
             type="submit"
-            className="bg-[#35C4D6] text-white rounded-md py-2 px-4 mt-2 font-medium hover:opacity-90 transition-opacity duration-300"
+            className="bg-brand-teal text-white rounded-md py-2 px-4 mt-2 font-medium hover:bg-brand-teal-dark transition-colors duration-300"
           >
             Connexion
           </button>

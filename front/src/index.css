@@ -1,1 +1,27 @@
 @import "tailwindcss";
+
+/**
+ * Charte graphique MyDigitalSchool 25-26
+ * Couleurs et typographies officielles, déclarées comme tokens Tailwind
+ * pour être réutilisées via des classes utilitaires (bg-brand-dark, font-heading, etc.)
+ */
+@theme {
+  /* Couleur principale (gris anthracite) */
+  --color-brand-dark: #3c3c3b;
+
+  /* Dégradé principal (usage générique de la marque) */
+  --color-brand-teal: #2ec7d3;
+  --color-brand-teal-light: #a4d6d5;
+  --color-brand-teal-dark: #23a1ab;
+
+  /* Couleurs secondaires (associées aux secteurs de formation) */
+  --color-brand-purple: #662483;
+  --color-brand-green: #56b78b;
+  --color-brand-pink: #e71d73;
+
+  /* Typographies de la charte : Bricolage Grotesque pour les titres,
+     Arial (typo système) en repli pour le texte courant (DIN OT n'est pas
+     libre de droits, Arial est la typo système recommandée par la charte). */
+  --font-heading: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: Arial, Helvetica, ui-sans-serif, system-ui, sans-serif;
+}

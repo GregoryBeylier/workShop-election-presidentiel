@@ -11,11 +11,20 @@ function SetPassword() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
+  // Règles de validation (à ajuster selon ce que le back exigera)
+  const hasMinLength = password.length >= 8;
+  const hasUpperCase = /[A-Z]/.test(password);
+  const hasNumber = /\d/.test(password);
+  const hasSpecialChar = /[^A-Za-z0-9]/.test(password);
+
+  const isPasswordValid =
+    hasMinLength && hasUpperCase && hasNumber && hasSpecialChar;
+
   const passwordsMatch = password === confirmPassword;
 
   const handleSubmit = (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!passwordsMatch) return;
+    if (!passwordsMatch || !isPasswordValid) return;
     // TODO: brancher l'appel API réel (envoyer le mot de passe + le token du lien email)
     console.log({ password });
   };
@@ -33,7 +42,9 @@ function SetPassword() {
           onSubmit={handleSubmit}
           className="bg-white rounded-xl shadow p-8 w-96 flex flex-col gap-4"
         >
-          <h1 className="text-2xl font-semibold">Créer votre mot de passe</h1>
+          <h1 className="text-2xl font-heading font-bold text-brand-dark">
+            Créer votre mot de passe
+          </h1>
 
           <div className="flex flex-col gap-1">
             <label htmlFor="password" className="text-sm text-gray-700">
@@ -48,7 +59,7 @@ function SetPassword() {
                 placeholder="8 caractères minimum"
                 minLength={8}
                 required
-                className="border border-gray-300 rounded-md py-2 px-4 w-full pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="border border-gray-300 rounded-md py-2 px-4 w-full pr-10 focus:outline-none focus:ring-2 focus:ring-brand-teal"
               />
               <button
                 type="button"
@@ -63,6 +74,31 @@ function SetPassword() {
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
+
+            {password.length > 0 && (
+              <ul className="text-sm space-y-1 mt-1">
+                <li
+                  className={hasMinLength ? "text-green-600" : "text-gray-400"}
+                >
+                  {hasMinLength ? "✓" : "○"} Au moins 8 caractères
+                </li>
+                <li
+                  className={hasUpperCase ? "text-green-600" : "text-gray-400"}
+                >
+                  {hasUpperCase ? "✓" : "○"} Une majuscule
+                </li>
+                <li className={hasNumber ? "text-green-600" : "text-gray-400"}>
+                  {hasNumber ? "✓" : "○"} Un chiffre
+                </li>
+                <li
+                  className={
+                    hasSpecialChar ? "text-green-600" : "text-gray-400"
+                  }
+                >
+                  {hasSpecialChar ? "✓" : "○"} Un caractère spécial
+                </li>
+              </ul>
+            )}
           </div>
 
           <div className="flex flex-col gap-1">
@@ -75,7 +111,7 @@ function SetPassword() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
-              className="border border-gray-300 rounded-md py-2 px-4 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border border-gray-300 rounded-md py-2 px-4 w-full focus:outline-none focus:ring-2 focus:ring-brand-teal"
             />
             {!passwordsMatch && confirmPassword.length > 0 && (
               <p className="text-sm text-red-500">
@@ -86,8 +122,8 @@ function SetPassword() {
 
           <button
             type="submit"
-            disabled={!passwordsMatch}
-            className="bg-[#35C4D6] text-white rounded-md py-2 px-4 mt-2 font-medium hover:opacity-90 transition-opacity duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={!passwordsMatch || !isPasswordValid}
+            className="bg-brand-teal text-white rounded-md py-2 px-4 mt-2 font-medium hover:bg-brand-teal-dark transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Valider
           </button>
