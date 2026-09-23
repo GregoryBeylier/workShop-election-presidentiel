@@ -1,7 +1,10 @@
 package fr.election.api.auth;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -48,6 +51,15 @@ public class AuthController {
 
 		boolean admin = adminRepository.existsByUtilisateurIdUtilisateur(utilisateur.getIdUtilisateur());
 		return new LoginResponse(jwtService.generer(utilisateur, admin), utilisateur.getEmail(), admin);
+	}
+
+	@GetMapping("/me")
+	public MeResponse me(@AuthenticationPrincipal Jwt jwt) {
+		Integer idUtilisateur = Integer.valueOf(jwt.getSubject());
+		Utilisateur utilisateur = utilisateurRepository.findById(idUtilisateur)
+			.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+		return new MeResponse(utilisateur.getEmail(), utilisateur.getMatricule(),
+				adminRepository.existsByUtilisateurIdUtilisateur(idUtilisateur));
 	}
 
 }

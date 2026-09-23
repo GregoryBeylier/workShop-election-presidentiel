@@ -1,71 +1,90 @@
-
+import { useEffect, useState } from "react";
+import { Navigate } from "react-router-dom";
 import { Trophy } from "lucide-react";
+import { ApiError } from "../../api/client";
+import { getResultats, type Resultats } from "../../api/election";
 
 type Candidate = {
   id: number;
   firstName: string;
   lastName: string;
   party: string;
-  votes: number;
-  image: string;
+  points: number;
 };
 
-const candidates: Candidate[] = [
-  {
-    id: 1,
-    firstName: "Sophie",
-    lastName: "Martin",
-    party: "Parti démocratique",
-    votes: 425,
-    image: "/images/sophie-martin.jpg",
-  },
-  {
-    id: 2,
-    firstName: "Lucas",
-    lastName: "Bernard",
-    party: "Mouvement citoyen",
-    votes: 310,
-    image: "/images/lucas-bernard.jpg",
-  },
-  {
-    id: 3,
-    firstName: "Emma",
-    lastName: "Dubois",
-    party: "Union républicaine",
-    votes: 185,
-    image: "/images/emma-dubois.jpg",
-  },
-];
+// Pas de photo en base : on affiche les initiales
+function Initiales({ candidate, className }: { candidate: Candidate; className: string }) {
+  return (
+    <div className={`flex h-full w-full items-center justify-center font-black text-[#3C3C3B] ${className}`}>
+      {candidate.firstName[0]}
+      {candidate.lastName[0]}
+    </div>
+  );
+}
+
+// Nombre de points au format français (0,5 pour une égalité)
+const formatPoints = (points: number) =>
+  points.toLocaleString("fr-FR", { maximumFractionDigits: 1 });
 
 function Result() {
+  const [resultats, setResultats] = useState<Resultats | null>(null);
+  const [scrutinOuvert, setScrutinOuvert] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  useEffect(() => {
+    getResultats()
+      .then(setResultats)
+      .catch((e: Error) => {
+        // 409 : scrutin encore ouvert, les résultats sont sous clé
+        if (e instanceof ApiError && e.status === 409) setScrutinOuvert(true);
+        else setErreur(e.message);
+      });
+  }, []);
+
+  if (scrutinOuvert) {
+    return <Navigate to="/waiting" replace />;
+  }
+
+  if (erreur || !resultats || resultats.classement.length === 0) {
+    return (
+      <p className={`mx-auto max-w-6xl px-4 py-10 text-center ${erreur ? "text-red-600" : "text-gray-500"}`}>
+        {erreur ?? (resultats ? "Aucun candidat pour ce scrutin." : "Chargement des résultats…")}
+      </p>
+    );
+  }
+
   // =================================================
   // ================= CALCULS =======================
   // =================================================
 
-  const sortedCandidates = [...candidates].sort(
-    (a, b) => b.votes - a.votes
-  );
+  // Déjà trié par points décroissants par le back
+  const sortedCandidates: Candidate[] = resultats.classement.map((r) => ({
+    id: r.candidat.id,
+    firstName: r.candidat.prenom,
+    lastName: r.candidat.nom,
+    party: r.candidat.parti,
+    points: r.points,
+  }));
 
   // Candidat élu
   const winner = sortedCandidates[0];
 
-  // Les 2 autres candidats
+  // Les autres candidats
   const otherCandidates = sortedCandidates.slice(1);
 
-  // Total des votants
-  const totalVotants = sortedCandidates.reduce(
-    (total, candidate) => total + candidate.votes,
+  // Total des points distribués (1 point par duel voté)
+  const totalPoints = sortedCandidates.reduce(
+    (total, candidate) => total + candidate.points,
     0
   );
 
-  // Nombre total d'inscrits
-  // À remplacer plus tard par la donnée du backend
-  const totalInscrits = 1000;
+  const totalVotants = resultats.periode.nbVotants;
+  const totalInscrits = resultats.periode.nbInscrits;
 
-  // Pourcentage du candidat élu
+  // Part des points du candidat élu
   const winnerPercentage =
-    totalVotants > 0
-      ? Math.round((winner.votes / totalVotants) * 100)
+    totalPoints > 0
+      ? Math.round((winner.points / totalPoints) * 100)
       : 0;
 
   // Taux de participation
@@ -129,11 +148,7 @@ function Result() {
 
               <div className="h-32 w-32 overflow-hidden rounded-full border-8 border-white bg-gray-100 shadow-lg sm:h-48 sm:w-48">
 
-                <img
-                  src={winner.image}
-                  alt={`${winner.firstName} ${winner.lastName}`}
-                  className="h-full w-full object-cover"
-                />
+                <Initiales candidate={winner} className="text-4xl sm:text-6xl" />
 
               </div>
 
@@ -165,15 +180,15 @@ function Result() {
 
               {/* Votes */}
               <p className="mt-4 text-base font-medium text-[#3C3C3B]/70">
-                Nombre de voix obtenues
+                Nombre de points obtenus
               </p>
 
               <p className="mt-1 text-4xl font-black text-[#3C3C3B] sm:text-5xl">
-                {winner.votes}
+                {formatPoints(winner.points)}
               </p>
 
               <p className="mt-1 font-semibold text-[#3C3C3B]/70">
-                voix
+                points
               </p>
 
               {/* ================= PROGRESSION ================= */}
@@ -204,7 +219,7 @@ function Result() {
                 </div>
 
                 <p className="mt-2 text-right text-xs font-semibold text-[#3C3C3B]/70 sm:text-sm">
-                  {winner.votes} voix sur {totalVotants}
+                  {formatPoints(winner.points)} points sur {formatPoints(totalPoints)}
                 </p>
 
               </div>
@@ -241,8 +256,8 @@ function Result() {
             {otherCandidates.map((candidate, index) => {
 
               const percentage =
-                totalVotants > 0
-                  ? Math.round((candidate.votes / totalVotants) * 100)
+                totalPoints > 0
+                  ? Math.round((candidate.points / totalPoints) * 100)
                   : 0;
 
               return (
@@ -267,11 +282,7 @@ function Result() {
 
                       <div className="h-14 w-14 overflow-hidden rounded-full border-4 border-[#2EC7D3] bg-gray-200 sm:h-20 sm:w-20">
 
-                        <img
-                          src={candidate.image}
-                          alt={`${candidate.firstName} ${candidate.lastName}`}
-                          className="h-full w-full object-cover"
-                        />
+                        <Initiales candidate={candidate} className="text-base sm:text-2xl" />
 
                       </div>
 
@@ -312,7 +323,7 @@ function Result() {
                         </div>
 
                         <span className="shrink-0 text-[11px] font-black text-[#3C3C3B] sm:text-base">
-                          {candidate.votes} voix
+                          {formatPoints(candidate.points)} pts
                         </span>
 
                       </div>
@@ -331,7 +342,7 @@ function Result() {
                       </div>
 
                       <p className="mt-1 text-[11px] text-gray-500 sm:text-sm">
-                        {percentage}% des suffrages
+                        {percentage}% des points
                       </p>
 
                     </div>

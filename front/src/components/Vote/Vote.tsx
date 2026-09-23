@@ -1,39 +1,69 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { Check, ChevronsRight, Lock } from "lucide-react";
-import { mockCandidats, type Candidat } from "../../data/mockData";
-
-/**
- * Génère tous les duels possibles (chaque candidat affronte chaque autre
- * une seule fois) — méthode "tout le monde contre tout le monde".
- */
-function generateDuels(candidats: Candidat[]): [Candidat, Candidat][] {
-  const duels: [Candidat, Candidat][] = [];
-  for (let i = 0; i < candidats.length; i++) {
-    for (let j = i + 1; j < candidats.length; j++) {
-      duels.push([candidats[i], candidats[j]]);
-    }
-  }
-  return duels;
-}
+import { ApiError } from "../../api/client";
+import { getMonVote, getPeriode, voter, type Duel } from "../../api/election";
 
 /**
  * Page de vote : présente les candidats deux par deux, "écran vs" façon
  * jeu de combat. L'électeur sélectionne un candidat (entouré en vert),
- * confirme son choix, ou passe le duel sans se prononcer.
+ * confirme son choix, ou passe le duel sans se prononcer (égalité).
+ * Chaque duel est enregistré immédiatement : on reprend au premier duel
+ * non voté en revenant sur la page.
  */
 function Vote() {
   const navigate = useNavigate();
-  const [duels] = useState(() => generateDuels(mockCandidats));
+  const [duels, setDuels] = useState<Duel[] | null>(null);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [scrutinClos, setScrutinClos] = useState(false);
 
   const [duelIndex, setDuelIndex] = useState(0);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   // Petit effet "impact" joué au moment de la confirmation, avant de
   // passer au duel suivant (façon écran de victoire des jeux de combat).
   const [isConfirming, setIsConfirming] = useState(false);
   // Même principe côté "Passer ce duel", mais en neutre (égalité, personne
   // n'est favorisé) plutôt qu'une victoire.
   const [isSkipping, setIsSkipping] = useState(false);
+
+  useEffect(() => {
+    Promise.all([getPeriode(), getMonVote()])
+      .then(([periode, monVote]) => {
+        if (!periode.ouverte) {
+          setScrutinClos(true);
+          return;
+        }
+        if (!monVote.inscrit) {
+          setErreur("Vous n'êtes pas inscrit à ce scrutin.");
+          return;
+        }
+        setDuels(monVote.duels);
+        // Reprise au premier duel pas encore voté
+        const premierRestant = monVote.duels.findIndex((d) => !d.fait);
+        setDuelIndex(premierRestant === -1 ? monVote.duels.length : premierRestant);
+      })
+      .catch((e: Error) => setErreur(e.message));
+  }, []);
+
+  if (scrutinClos) {
+    return <Navigate to="/resultats" replace />;
+  }
+
+  if (erreur) {
+    return (
+      <p className="max-w-4xl mx-auto px-4 sm:px-8 py-10 text-center text-red-600">
+        {erreur}
+      </p>
+    );
+  }
+
+  if (!duels) {
+    return (
+      <p className="max-w-4xl mx-auto px-4 sm:px-8 py-10 text-center text-gray-500">
+        Chargement des duels…
+      </p>
+    );
+  }
 
   const currentDuel = duels[duelIndex];
   const isLastDuel = duelIndex === duels.length - 1;
@@ -43,38 +73,59 @@ function Vote() {
     setIsConfirming(false);
     setIsSkipping(false);
     if (isLastDuel) {
-      // TODO: rediriger vers un écran de fin de scrutin une fois qu'il existera
-      navigate("/");
+      navigate("/waiting");
     } else {
       setDuelIndex((i) => i + 1);
     }
   };
 
+  // Enregistre le duel puis joue l'animation ; en cas d'erreur on reste sur le duel
+  const envoyer = async (idCandidatChoisi: number | null) => {
+    try {
+      await voter(currentDuel.id, idCandidatChoisi);
+    } catch (e) {
+      // 409 "déjà voté" : le duel est enregistré, on peut avancer
+      if (!(e instanceof ApiError && e.status === 409)) {
+        setErreur((e as Error).message);
+        return;
+      }
+    }
+    window.setTimeout(goToNextDuel, 1100);
+  };
+
   const handleConfirm = () => {
     if (!selectedId || isConfirming) return;
-    // TODO: envoyer le vote à l'API (numéro du duel + candidat choisi)
-    console.log("Vote confirmé :", {
-      duel: duelIndex + 1,
-      candidatId: selectedId,
-    });
     setIsConfirming(true);
-    window.setTimeout(goToNextDuel, 1100);
+    envoyer(selectedId);
   };
 
   const handleSkip = () => {
     if (isConfirming || isSkipping) return;
-    // TODO: définir avec le back ce qu'il advient d'un duel passé
-    // (redemandé plus tard ? comptabilisé comme neutre ?)
-    console.log("Duel passé :", duelIndex + 1);
     setIsSkipping(true);
-    window.setTimeout(goToNextDuel, 1100);
+    envoyer(null);
   };
 
+  // Tous les duels sont déjà votés
   if (!currentDuel) {
-    return null;
+    return (
+      <div className="max-w-4xl mx-auto px-4 sm:px-8 py-10 text-center">
+        <h1 className="font-heading text-2xl font-bold text-brand-dark mb-2">
+          Votre vote est enregistré
+        </h1>
+        <p className="text-gray-500 mb-6">
+          Vous avez voté les {duels.length} duels. Merci pour votre participation !
+        </p>
+        <Link
+          to="/waiting"
+          className="inline-block bg-brand-teal text-white rounded-md px-6 py-2 font-medium hover:bg-brand-teal-dark transition-colors duration-300"
+        >
+          Suivre le scrutin
+        </Link>
+      </div>
+    );
   }
 
-  const [candidatA, candidatB] = currentDuel;
+  const { candidat1: candidatA, candidat2: candidatB } = currentDuel;
   const winner =
     candidatA.id === selectedId
       ? candidatA
@@ -170,30 +221,9 @@ function Vote() {
                 <h2 className="font-heading font-bold text-brand-dark uppercase tracking-wide text-xs sm:text-base leading-tight">
                   {candidat.prenom} {candidat.nom}
                 </h2>
-                <p className="text-[11px] sm:text-sm text-brand-teal-dark font-medium mb-1 sm:mb-3 leading-tight">
+                <p className="text-[11px] sm:text-sm text-brand-teal-dark font-medium leading-tight">
                   {candidat.parti}
                 </p>
-
-                <ul className="flex flex-col gap-0.5 sm:gap-1.5 text-left max-w-[220px] mx-auto">
-                  {candidat.priorites.map((priorite) => (
-                    <li
-                      key={priorite}
-                      className="text-[10px] sm:text-xs text-gray-600 flex items-center gap-1 sm:gap-1.5 leading-tight"
-                    >
-                      <Check
-                        size={10}
-                        strokeWidth={3}
-                        className="text-brand-teal shrink-0 sm:hidden"
-                      />
-                      <Check
-                        size={12}
-                        strokeWidth={3}
-                        className="text-brand-teal shrink-0 hidden sm:block"
-                      />
-                      {priorite}
-                    </li>
-                  ))}
-                </ul>
               </div>
 
               {/* "Victoire !" façon jeu de combat sur le candidat choisi */}
@@ -231,7 +261,7 @@ function Vote() {
 
         <p className="hidden sm:flex items-center gap-1.5 text-xs text-gray-400 mt-2">
           <Lock size={12} />
-          Vote anonyme · une voix pour le candidat choisi
+          Vote anonyme · 1 point au candidat choisi, 0,5 chacun en cas d'égalité
         </p>
       </div>
     </div>

@@ -21,9 +21,10 @@ function Navbar() {
     { to: "/resultats", label: "Résultats", icon: BarChart3 },
   ];
 
-  // TODO: remplacer par les vraies données du profil connecté
-  const firstName = "Lucas";
-  const lastNameInitial = "D.";
+  // Les électeurs n'ont ni nom ni prénom : on affiche l'email (enregistré à la connexion)
+  const email = localStorage.getItem("email") ?? "";
+  const displayName = email.split("@")[0];
+  const initials = displayName.slice(0, 2).toUpperCase();
 
   // Menu déroulant "Mon compte / Déconnexion"
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -102,11 +103,10 @@ function Navbar() {
             }`}
           >
             <div className="w-8 h-8 rounded-full bg-brand-teal/10 text-brand-teal-dark text-sm font-semibold flex items-center justify-center shrink-0">
-              {firstName[0]}
-              {lastNameInitial[0]}
+              {initials}
             </div>
             <span className="hidden lg:block text-sm font-medium text-gray-700">
-              {firstName} {lastNameInitial}
+              {displayName}
             </span>
             <ChevronDown
               size={14}
@@ -121,8 +121,8 @@ function Navbar() {
           {isMenuOpen && (
             <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-lg border border-gray-100 py-2 overflow-hidden">
               <div className="px-4 py-2 border-b border-gray-100">
-                <p className="text-sm font-medium text-gray-900">
-                  {firstName} {lastNameInitial}
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {email}
                 </p>
                 <p className="text-xs text-gray-500">
                   {getRole() === "ADMIN" ? "Administrateur" : "Électeur"}

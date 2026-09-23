@@ -1,5 +1,11 @@
-
 import { useEffect, useState } from "react";
+import { Navigate } from "react-router-dom";
+import {
+  dateCloture,
+  formatJour,
+  getPeriode,
+  type Periode,
+} from "../../api/election";
 import {
   Lock,
   CheckCircle2,
@@ -9,11 +15,29 @@ import {
 } from "lucide-react";
 
 function Waiting() {
-  const targetDate = new Date("2026-04-12T20:00:00");
+  const [periode, setPeriode] = useState<Periode | null>(null);
+
+  useEffect(() => {
+    getPeriode().then(setPeriode).catch(() => {});
+  }, []);
+
+  const targetDate = periode ? dateCloture(periode) : null;
+
+  // Heure courante, rafraîchie chaque seconde pour le compte à rebours
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   const calculateTimeLeft = () => {
-    const difference =
-      targetDate.getTime() - new Date().getTime();
+    const difference = targetDate
+      ? targetDate.getTime() - now
+      : 0;
 
     if (difference <= 0) {
       return {
@@ -24,8 +48,9 @@ function Waiting() {
     }
 
     return {
+      // Heures totales (sans modulo 24) : le scrutin peut durer plusieurs jours
       hours: Math.floor(
-        (difference / (1000 * 60 * 60)) % 24
+        difference / (1000 * 60 * 60)
       ),
 
       minutes: Math.floor(
@@ -38,20 +63,11 @@ function Waiting() {
     };
   };
 
-  const [timeLeft, setTimeLeft] =
-    useState(calculateTimeLeft());
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft(calculateTimeLeft());
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
+  const timeLeft = calculateTimeLeft();
 
   // Participation
-  const totalVotes = 31;
-  const totalVoters = 60;
+  const totalVotes = periode?.nbVotants ?? 0;
+  const totalVoters = periode?.nbInscrits ?? 0;
 
   const participation =
     totalVoters > 0
@@ -59,6 +75,11 @@ function Waiting() {
           (totalVotes / totalVoters) * 100
         )
       : 0;
+
+  // Scrutin clos : les résultats sont publiés
+  if (periode && !periode.ouverte) {
+    return <Navigate to="/resultats" replace />;
+  }
 
   return (
     <main className="min-h-screen bg-[#F5F5F5] px-4 py-8 sm:px-6 sm:py-12">
@@ -119,6 +140,16 @@ function Waiting() {
             </h2>
 
 
+            {/* Texte */}
+            <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-gray-500 sm:text-base">
+
+              Les résultats restent sous clé jusqu'à la fermeture
+              des urnes. En attendant, on compte sur votre
+              patience — et sur vos voix.
+
+            </p>
+
+
             {/* =========================
                 CITATION
             ========================= */}
@@ -132,15 +163,6 @@ function Waiting() {
               </p>
 
             </div>
-            
-             {/* Texte */}
-            <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-gray-500 sm:text-base">
-
-              Les résultats restent sous clé jusqu'à la fermeture
-              des urnes. En attendant, on compte sur votre
-              patience — et sur vos voix.
-
-            </p>
 
 
             {/* =========================
@@ -202,7 +224,8 @@ function Waiting() {
 
               {/* DATE DE CLÔTURE */}
               <p className="mt-5 text-sm font-bold text-[#3C3C3B]">
-                Avant la clôture du scrutin, le 12 avril à 20h00
+                Avant la clôture du scrutin
+                {targetDate && `, le ${formatJour(targetDate)} à minuit`}
               </p>
 
             </div>

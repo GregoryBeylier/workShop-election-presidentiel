@@ -1,12 +1,31 @@
+import { useEffect, useState } from "react";
+import {
+  dateCloture,
+  formatJour,
+  getMonVote,
+  getPeriode,
+  type MonVote,
+  type Periode,
+} from "../../api/election";
+
 /**
  * Page d'accueil de l'espace électeur.
  * Affiche la progression du vote et explique le fonctionnement.
  */
 function ElectorHome() {
-  // TODO: remplacer par les vraies données venant de l'API (profil + progression)
-  const dutiesDone = 4;
-  const dutiesTotal = 6;
-  const closingDate = "12 avril";
+  const [periode, setPeriode] = useState<Periode | null>(null);
+  const [monVote, setMonVote] = useState<MonVote | null>(null);
+
+  useEffect(() => {
+    getPeriode().then(setPeriode).catch(() => {});
+    getMonVote().then(setMonVote).catch(() => {});
+  }, []);
+
+  const dutiesDone = monVote?.duels.filter((d) => d.fait).length ?? 0;
+  const dutiesTotal = monVote?.duels.length ?? periode?.nbDuels ?? 0;
+  const cloture = periode && dateCloture(periode);
+  const closingDate = cloture ? formatJour(cloture) : "…";
+  const ouvert = periode?.ouverte ?? true;
 
   return (
     <>
@@ -15,7 +34,9 @@ function ElectorHome() {
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
           <div>
             <span className="inline-block bg-brand-teal text-white text-xs font-semibold px-3 py-1 rounded-full mb-4">
-              SCRUTIN OUVERT JUSQU'AU {closingDate.toUpperCase()}
+              {ouvert
+                ? `SCRUTIN OUVERT JUSQU'AU ${closingDate.toUpperCase()}`
+                : "SCRUTIN CLOS"}
             </span>
             <h1 className="font-heading text-3xl sm:text-4xl font-bold leading-tight mb-4">
               Votre voix,
@@ -24,7 +45,7 @@ function ElectorHome() {
             </h1>
             <p className="text-gray-300 mb-6">
               Comparez les candidats deux par deux plutôt que d'en cocher un
-              seul. Six duels suffisent pour exprimer votre préférence.
+              seul. {dutiesTotal} duels suffisent pour exprimer votre préférence.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <a
@@ -57,7 +78,12 @@ function ElectorHome() {
               <span className="text-gray-600">duels sur {dutiesTotal}</span>
             </div>
 
-            <div className="grid grid-cols-6 gap-1 mb-4">
+            <div
+              className="grid gap-1 mb-4"
+              style={{
+                gridTemplateColumns: `repeat(${Math.max(dutiesTotal, 1)}, minmax(0, 1fr))`,
+              }}
+            >
               {Array.from({ length: dutiesTotal }).map((_, i) => (
                 <div
                   key={i}
@@ -69,8 +95,9 @@ function ElectorHome() {
             </div>
 
             <p className="text-sm text-gray-600 mb-4">
-              Plus que {dutiesTotal - dutiesDone} duels avant l'enregistrement
-              définitif de votre vote.
+              {dutiesDone >= dutiesTotal && dutiesTotal > 0
+                ? "Votre vote est entièrement enregistré. Merci !"
+                : `Plus que ${dutiesTotal - dutiesDone} duels avant l'enregistrement définitif de votre vote.`}
             </p>
 
             <a
@@ -113,8 +140,8 @@ function ElectorHome() {
                 2
               </span>
               <p className="text-sm text-gray-700">
-                Chaque duel donne une voix au candidat choisi. Les scores
-                restent masqués.
+                Chaque duel donne 1 point au candidat choisi (0,5 chacun en
+                cas d'égalité). Les scores restent masqués.
               </p>
             </div>
             <div className="bg-white rounded-xl shadow p-6">
@@ -122,7 +149,7 @@ function ElectorHome() {
                 3
               </span>
               <p className="text-sm text-gray-700">
-                Après 6 duels, votre vote est enregistré et anonymisé
+                Après {dutiesTotal} duels, votre vote est enregistré et anonymisé
                 définitivement.
               </p>
             </div>

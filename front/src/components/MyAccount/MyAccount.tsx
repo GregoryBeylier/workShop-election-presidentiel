@@ -1,28 +1,38 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserRound, Lock, Bell, CheckSquare, BadgeCheck } from "lucide-react";
 import { logout } from "../../api/auth";
-import { mockElecteurs } from "../../data/mockData";
+import {
+  getMonVote,
+  getProfil,
+  type MonVote,
+  type Profil,
+} from "../../api/election";
 
 type Tab = "informations" | "securite" | "notifications" | "vote";
 
 /**
  * Page "Mon compte" de l'espace électeur.
- * Permet de consulter/modifier ses informations, son mot de passe
+ * Affiche ses informations (email, matricule), son statut de vote
  * et ses préférences de notifications.
  */
 function MyAccount() {
   const navigate = useNavigate();
 
-  // TODO: remplacer par les vraies données du profil connecté (API)
-  const currentUser = mockElecteurs[0]; // Lucas Dupont
+  const [profil, setProfil] = useState<Profil | null>(null);
+  const [monVote, setMonVote] = useState<MonVote | null>(null);
+
+  useEffect(() => {
+    getProfil().then(setProfil).catch(() => {});
+    getMonVote().then(setMonVote).catch(() => {});
+  }, []);
 
   const [activeTab, setActiveTab] = useState<Tab>("informations");
-  const [prenom, setPrenom] = useState(currentUser.prenom);
-  const [nom, setNom] = useState(currentUser.nom);
-  const [email, setEmail] = useState(currentUser.email);
-  const [commune, setCommune] = useState("Saint-Martin-d'Hères");
   const [emailAlerts, setEmailAlerts] = useState(true);
+
+  const email = profil?.email ?? localStorage.getItem("email") ?? "";
+  const duelsFaits = monVote?.duels.filter((d) => d.fait).length ?? 0;
+  const duelsTotal = monVote?.duels.length ?? 0;
 
   const tabs: { id: Tab; label: string; icon: typeof UserRound }[] = [
     { id: "informations", label: "Mes informations", icon: UserRound },
@@ -30,19 +40,6 @@ function MyAccount() {
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "vote", label: "Mon vote", icon: CheckSquare },
   ];
-
-  const handleSave = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    // TODO: brancher l'appel API de mise à jour du profil
-    console.log({ prenom, nom, email, commune });
-  };
-
-  const handleCancel = () => {
-    setPrenom(currentUser.prenom);
-    setNom(currentUser.nom);
-    setEmail(currentUser.email);
-    setCommune("Saint-Martin-d'Hères");
-  };
 
   const handleLogout = () => {
     logout();
@@ -54,12 +51,11 @@ function MyAccount() {
       {/* En-tête profil */}
       <div className="flex items-center gap-4 mb-8">
         <div className="w-14 h-14 rounded-full bg-brand-dark text-white text-lg font-semibold flex items-center justify-center shrink-0">
-          {currentUser.prenom[0]}
-          {currentUser.nom[0]}
+          {email.slice(0, 2).toUpperCase()}
         </div>
         <div>
-          <h1 className="font-heading text-xl font-bold text-brand-dark">
-            {currentUser.prenom} {currentUser.nom}
+          <h1 className="font-heading text-xl font-bold text-brand-dark break-all">
+            {email}
           </h1>
           <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2 py-0.5 rounded-full mt-1">
             <BadgeCheck size={12} />
@@ -96,68 +92,24 @@ function MyAccount() {
                 <h2 className="font-semibold text-brand-dark mb-4">
                   Mes informations
                 </h2>
-                <form
-                  onSubmit={handleSave}
-                  className="grid grid-cols-1 sm:grid-cols-2 gap-4"
-                >
+<dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs font-medium text-gray-500">
-                      Prénom
-                    </label>
-                    <input
-                      value={prenom}
-                      onChange={(e) => setPrenom(e.target.value)}
-                      className="border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-brand-teal"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-medium text-gray-500">
-                      Nom
-                    </label>
-                    <input
-                      value={nom}
-                      onChange={(e) => setNom(e.target.value)}
-                      className="border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-brand-teal"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-medium text-gray-500">
+                    <dt className="text-xs font-medium text-gray-500">
                       Adresse mail
-                    </label>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-brand-teal"
-                    />
+                    </dt>
+                    <dd className="border border-gray-200 bg-gray-50 rounded-md py-2 px-3 break-all">
+                      {email}
+                    </dd>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs font-medium text-gray-500">
-                      Commune d'inscription
-                    </label>
-                    <input
-                      value={commune}
-                      onChange={(e) => setCommune(e.target.value)}
-                      className="border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-brand-teal"
-                    />
+                    <dt className="text-xs font-medium text-gray-500">
+                      Matricule
+                    </dt>
+                    <dd className="border border-gray-200 bg-gray-50 rounded-md py-2 px-3">
+                      {profil?.matricule ?? "…"}
+                    </dd>
                   </div>
-
-                  <div className="sm:col-span-2 flex gap-3 mt-2">
-                    <button
-                      type="submit"
-                      className="bg-brand-teal text-white rounded-md px-5 py-2 text-sm font-medium hover:bg-brand-teal-dark transition-colors duration-300"
-                    >
-                      Enregistrer les modifications
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleCancel}
-                      className="border border-gray-300 text-gray-700 rounded-md px-5 py-2 text-sm font-medium hover:bg-gray-50 transition-colors duration-300"
-                    >
-                      Annuler
-                    </button>
-                  </div>
-                </form>
+                </dl>
               </div>
 
               <div className="bg-white rounded-xl shadow p-6 flex flex-col gap-5">
@@ -165,9 +117,6 @@ function MyAccount() {
                   <div>
                     <p className="text-sm font-medium text-brand-dark">
                       Mot de passe
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Modifié il y a 3 mois
                     </p>
                   </div>
                   <button
@@ -241,11 +190,15 @@ function MyAccount() {
               <h2 className="font-semibold text-brand-dark mb-2">Mon vote</h2>
               <p className="text-sm text-gray-500">
                 Statut :{" "}
-                {currentUser.statutVote === "a_vote"
-                  ? "vous avez déjà voté"
-                  : currentUser.statutVote === "en_cours"
-                    ? "vote en cours"
-                    : "vous n'avez pas encore voté"}
+                {!monVote
+                  ? "…"
+                  : !monVote.inscrit
+                    ? "vous n'êtes pas inscrit à ce scrutin"
+                    : duelsTotal > 0 && duelsFaits === duelsTotal
+                      ? "vous avez déjà voté"
+                      : duelsFaits > 0
+                        ? `vote en cours (${duelsFaits} duels sur ${duelsTotal})`
+                        : "vous n'avez pas encore voté"}
                 .
               </p>
             </div>

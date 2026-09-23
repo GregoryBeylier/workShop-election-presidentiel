@@ -36,6 +36,9 @@ public class Candidat {
 	@Column(name = "prenom", nullable = false, length = 100)
 	private String prenom = "";
 
+	@Column(name = "parti", nullable = false, length = 100)
+	private String parti = "";
+
 	@Column(name = "inscrit_le", nullable = false)
 	private LocalDate inscritLe = LocalDate.now();
 
@@ -48,6 +51,8 @@ public class Candidat {
 	public void setNom(String nom) { this.nom = nom; }
 	public String getPrenom() { return prenom; }
 	public void setPrenom(String prenom) { this.prenom = prenom; }
+	public String getParti() { return parti; }
+	public void setParti(String parti) { this.parti = parti; }
 	public LocalDate getInscritLe() { return inscritLe; }
 
 }
