@@ -119,16 +119,6 @@ function Waiting() {
             </h2>
 
 
-            {/* Texte */}
-            <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-gray-500 sm:text-base">
-
-              Les résultats restent sous clé jusqu'à la fermeture
-              des urnes. En attendant, on compte sur votre
-              patience — et sur vos voix.
-
-            </p>
-
-
             {/* =========================
                 CITATION
             ========================= */}
@@ -142,6 +132,15 @@ function Waiting() {
               </p>
 
             </div>
+            
+             {/* Texte */}
+            <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-gray-500 sm:text-base">
+
+              Les résultats restent sous clé jusqu'à la fermeture
+              des urnes. En attendant, on compte sur votre
+              patience — et sur vos voix.
+
+            </p>
 
 
             {/* =========================
