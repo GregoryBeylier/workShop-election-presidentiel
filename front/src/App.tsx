@@ -6,6 +6,8 @@ import ElectorHome from "./components/ElectorHome/ElectorHome";
 import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
 import Result from "./components/result/result";
 import AdminHome from "./components/AdminHome/AdminHome";
+import MyAccount from "./components/MyAccount/MyAccount";
+import Vote from "./components/Vote/Vote";
 
 function App() {
   return (
@@ -20,7 +22,8 @@ function App() {
           <Route element={<Layout />}>
             <Route path="/" element={<ElectorHome />} />
             <Route path="/resultats" element={<Result />} />
-            {/* on ajoutera /vote, /mon-compte ici plus tard */}
+            <Route path="/mon-compte" element={<MyAccount />} />
+            <Route path="/vote" element={<Vote />} />
 
             {/* Pages réservées aux admins (électeur => renvoyé à l'accueil) */}
             <Route element={<ProtectedRoute role="ADMIN" />}>
