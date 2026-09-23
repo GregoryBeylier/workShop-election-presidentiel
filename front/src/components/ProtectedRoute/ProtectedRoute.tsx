@@ -1,14 +1,23 @@
-import { Navigate } from "react-router-dom";
-import type { ReactNode } from "react";
-import { getValidToken } from "../../api/auth";
+import { Navigate, Outlet } from "react-router-dom";
+import { getRole, type Role } from "../../api/auth";
 
-function ProtectedRoute({ children }: { children: ReactNode }) {
-  // Token absent, illisible ou expiré : retour à la connexion
-  if (!getValidToken()) {
+/**
+ * Garde d'un groupe de routes.
+ * - pas connecté (token absent, illisible ou expiré) => /login
+ * - connecté mais sans le rôle demandé => accueil
+ * Sans `role`, il suffit d'être connecté.
+ */
+function ProtectedRoute({ role }: { role?: Role }) {
+  const userRole = getRole();
+
+  if (!userRole) {
     return <Navigate to="/login" replace />;
   }
+  if (role && userRole !== role) {
+    return <Navigate to="/" replace />;
+  }
 
-  return <>{children}</>;
+  return <Outlet />;
 }
 
 export default ProtectedRoute;

@@ -1,9 +1,24 @@
-import { Link, useLocation } from "react-router-dom";
-import { Home, Vote, BarChart3, UserRound, ChevronDown } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  Home,
+  Vote,
+  BarChart3,
+  UserRound,
+  ChevronDown,
+  LogOut,
+} from "lucide-react";
+import { logout } from "../../api/auth";
 import logo from "../../assets/mydigitalschool-logo.png";
 
 function Navbar() {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Vide la session locale et renvoie sur la page de connexion
+  const handleLogout = () => {
+    logout();
+    navigate("/login", { replace: true });
+  };
 
   const links = [
     { to: "/", label: "Accueil", icon: Home },
@@ -58,29 +73,43 @@ function Navbar() {
           })}
         </div>
 
-        {/* Profil connecté */}
-        <Link
-          to="/mon-compte"
-          className={`flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-full border transition-colors duration-300 shrink-0 ${
-            location.pathname === "/mon-compte"
-              ? "border-brand-teal bg-brand-teal/5"
-              : "border-transparent hover:border-gray-200 hover:bg-gray-50"
-          }`}
-        >
-          <div className="w-8 h-8 rounded-full bg-brand-teal/10 text-brand-teal-dark text-sm font-semibold flex items-center justify-center shrink-0">
-            {firstName[0]}
-            {lastNameInitial[0]}
-          </div>
-          <span className="hidden lg:block text-sm font-medium text-gray-700">
-            {firstName} {lastNameInitial}
-          </span>
-          <ChevronDown
-            size={14}
-            className="hidden lg:block text-gray-400"
-            strokeWidth={2.5}
-          />
-          <UserRound size={18} className="lg:hidden text-gray-500" />
-        </Link>
+        {/* Profil connecté + déconnexion */}
+        <div className="flex items-center gap-1 shrink-0">
+          <Link
+            to="/mon-compte"
+            className={`flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-full border transition-colors duration-300 shrink-0 ${
+              location.pathname === "/mon-compte"
+                ? "border-brand-teal bg-brand-teal/5"
+                : "border-transparent hover:border-gray-200 hover:bg-gray-50"
+            }`}
+          >
+            <div className="w-8 h-8 rounded-full bg-brand-teal/10 text-brand-teal-dark text-sm font-semibold flex items-center justify-center shrink-0">
+              {firstName[0]}
+              {lastNameInitial[0]}
+            </div>
+            <span className="hidden lg:block text-sm font-medium text-gray-700">
+              {firstName} {lastNameInitial}
+            </span>
+            <ChevronDown
+              size={14}
+              className="hidden lg:block text-gray-400"
+              strokeWidth={2.5}
+            />
+            <UserRound size={18} className="lg:hidden text-gray-500" />
+          </Link>
+
+          {/* Déconnexion : retour à la page de connexion */}
+          <button
+            type="button"
+            onClick={handleLogout}
+            aria-label="Se déconnecter"
+            title="Se déconnecter"
+            className="flex items-center gap-2 text-sm font-medium text-gray-500 px-3 py-2 rounded-full hover:text-red-600 hover:bg-red-50 transition-colors duration-300 shrink-0"
+          >
+            <LogOut size={16} strokeWidth={2.25} />
+            <span className="hidden lg:inline">Déconnexion</span>
+          </button>
+        </div>
       </div>
     </nav>
   );
