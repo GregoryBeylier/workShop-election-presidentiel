@@ -11,13 +11,13 @@ function ElectorHome() {
   return (
     <>
       {/* Bandeau hero */}
-      <section className="bg-gradient-to-br from-brand-dark to-brand-teal-dark text-white px-8 py-16">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+      <section className="bg-gradient-to-br from-brand-dark to-brand-teal-dark text-white px-4 sm:px-8 py-12 sm:py-16">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
           <div>
             <span className="inline-block bg-brand-teal text-white text-xs font-semibold px-3 py-1 rounded-full mb-4">
               SCRUTIN OUVERT JUSQU'AU {closingDate.toUpperCase()}
             </span>
-            <h1 className="font-heading text-4xl font-bold leading-tight mb-4">
+            <h1 className="font-heading text-3xl sm:text-4xl font-bold leading-tight mb-4">
               Votre voix,
               <br />
               duel après duel.
@@ -26,23 +26,23 @@ function ElectorHome() {
               Comparez les candidats deux par deux plutôt que d'en cocher un
               seul. Six duels suffisent pour exprimer votre préférence.
             </p>
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <a
                 href="/vote"
-                className="bg-white text-brand-dark rounded-md px-5 py-3 font-medium hover:bg-gray-100 transition-colors duration-300 inline-flex items-center gap-2"
+                className="bg-white text-brand-dark rounded-md px-5 py-3 font-medium hover:bg-gray-100 transition-colors duration-300 inline-flex items-center justify-center gap-2"
               >
                 Continuer à voter →
               </a>
               <a
                 href="/resultats"
-                className="border border-white text-white rounded-md px-5 py-3 font-medium hover:bg-white/10 transition-colors duration-300"
+                className="border border-white text-white rounded-md px-5 py-3 font-medium hover:bg-white/10 transition-colors duration-300 text-center"
               >
                 Voir les résultats
               </a>
             </div>
           </div>
 
-          <div className="bg-white text-gray-900 rounded-xl p-6">
+          <div className="bg-white text-gray-900 rounded-xl p-5 sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <span className="font-semibold">Votre progression</span>
               <span className="text-sm text-gray-500">
@@ -84,9 +84,9 @@ function ElectorHome() {
       </section>
 
       {/* Comment ça marche */}
-      <section className="px-8 py-12">
+      <section className="px-4 sm:px-8 py-10 sm:py-12">
         <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6">
             <h2 className="font-heading text-2xl font-bold text-brand-dark">
               Comment ça marche
             </h2>
@@ -131,7 +131,7 @@ function ElectorHome() {
       </section>
 
       {/* Univers MyDigitalSchool */}
-      <section className="px-8 py-12 bg-gray-50">
+      <section className="px-4 sm:px-8 py-10 sm:py-12 bg-gray-50">
         <div className="max-w-6xl mx-auto">
           <h2 className="font-heading text-2xl font-bold text-brand-dark mb-2">
             Un projet porté par les 3 univers MyDigitalSchool

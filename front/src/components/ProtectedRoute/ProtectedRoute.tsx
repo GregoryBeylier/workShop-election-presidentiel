@@ -1,10 +1,10 @@
 import { Navigate } from "react-router-dom";
 import type { ReactNode } from "react";
+import { getValidToken } from "../../api/auth";
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
-  const token = localStorage.getItem("token");
-
-  if (!token) {
+  // Token absent, illisible ou expiré : retour à la connexion
+  if (!getValidToken()) {
     return <Navigate to="/login" replace />;
   }
 

@@ -1,5 +1,7 @@
 import { useState, type SubmitEvent } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { login } from "../../api/auth";
 import logo from "../../assets/mydigitalschool-logo.png";
 
 /**
@@ -11,17 +13,22 @@ function Login() {
   const [password, setPassword] = useState("");
   // Contrôle l'affichage en clair du mot de passe (masqué par défaut)
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    // TODO: remplacer par le vrai appel API une fois le back prêt
-    // const res = await fetch("https://ton-api.com/login", { ... });
-
-    // Simulation en attendant :
-    const fakeToken = "fake-token-123";
-    localStorage.setItem("token", fakeToken);
-    console.log("Connexion simulée réussie, token stocké");
+    setError(null);
+    setLoading(true);
+    try {
+      await login(email, password);
+      navigate("/", { replace: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Connexion impossible");
+    } finally {
+      setLoading(false);
+    }
   };
   return (
     <div className="min-h-screen bg-gray-100 relative">
@@ -31,10 +38,10 @@ function Login() {
         className="absolute top-6 left-6 h-10"
       />
 
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center px-4">
         <form
           onSubmit={handleSubmit}
-          className="bg-white rounded-xl shadow p-8 w-96 flex flex-col gap-4"
+          className="bg-white rounded-xl shadow p-6 sm:p-8 w-full max-w-sm flex flex-col gap-4"
         >
           <h1 className="text-2xl font-heading font-bold text-brand-dark">
             Connexion
@@ -89,11 +96,18 @@ function Login() {
             Mot de passe oublié ?
           </a>
 
+          {error && (
+            <p role="alert" className="text-sm text-red-500">
+              {error}
+            </p>
+          )}
+
           <button
             type="submit"
-            className="bg-brand-teal text-white rounded-md py-2 px-4 mt-2 font-medium hover:bg-brand-teal-dark transition-colors duration-300"
+            disabled={loading}
+            className="bg-brand-teal text-white rounded-md py-2 px-4 mt-2 font-medium hover:bg-brand-teal-dark transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Connexion
+            {loading ? "Connexion..." : "Connexion"}
           </button>
         </form>
       </div>
