@@ -3,26 +3,23 @@ import { Eye, EyeOff } from "lucide-react";
 import logo from "../../assets/mydigitalschool-logo.png";
 
 /**
- * Formulaire de connexion des électeurs.
- * Envoie les identifiants à l'API pour authentification.
+ * Page de création de mot de passe, accessible via le lien reçu par email
+ * après que l'admin a créé le compte de l'électeur.
  */
-function Login() {
-  const [email, setEmail] = useState("");
+function SetPassword() {
   const [password, setPassword] = useState("");
-  // Contrôle l'affichage en clair du mot de passe (masqué par défaut)
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
+  const passwordsMatch = password === confirmPassword;
+
+  const handleSubmit = (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    // TODO: remplacer par le vrai appel API une fois le back prêt
-    // const res = await fetch("https://ton-api.com/login", { ... });
-
-    // Simulation en attendant :
-    const fakeToken = "fake-token-123";
-    localStorage.setItem("token", fakeToken);
-    console.log("Connexion simulée réussie, token stocké");
+    if (!passwordsMatch) return;
+    // TODO: brancher l'appel API réel (envoyer le mot de passe + le token du lien email)
+    console.log({ password });
   };
+
   return (
     <div className="min-h-screen bg-gray-100 relative">
       <img
@@ -36,21 +33,7 @@ function Login() {
           onSubmit={handleSubmit}
           className="bg-white rounded-xl shadow p-8 w-96 flex flex-col gap-4"
         >
-          <h1 className="text-2xl font-semibold">Connexion</h1>
-
-          <div className="flex flex-col gap-1">
-            <label htmlFor="email" className="text-sm text-gray-700">
-              Adresse email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="border border-gray-300 rounded-md py-2 px-4 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+          <h1 className="text-2xl font-semibold">Créer votre mot de passe</h1>
 
           <div className="flex flex-col gap-1">
             <label htmlFor="password" className="text-sm text-gray-700">
@@ -62,6 +45,8 @@ function Login() {
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                placeholder="8 caractères minimum"
+                minLength={8}
                 required
                 className="border border-gray-300 rounded-md py-2 px-4 w-full pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -80,18 +65,31 @@ function Login() {
             </div>
           </div>
 
-          <a
-            href="/mot-de-passe-oublie"
-            className="text-sm text-gray-700 hover:underline"
-          >
-            Mot de passe oublié ?
-          </a>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="confirmPassword" className="text-sm text-gray-700">
+              Confirmer le mot de passe
+            </label>
+            <input
+              id="confirmPassword"
+              type={showPassword ? "text" : "password"}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              className="border border-gray-300 rounded-md py-2 px-4 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {!passwordsMatch && confirmPassword.length > 0 && (
+              <p className="text-sm text-red-500">
+                Les mots de passe ne correspondent pas
+              </p>
+            )}
+          </div>
 
           <button
             type="submit"
-            className="bg-[#35C4D6] text-white rounded-md py-2 px-4 mt-2 font-medium hover:opacity-90 transition-opacity duration-300"
+            disabled={!passwordsMatch}
+            className="bg-[#35C4D6] text-white rounded-md py-2 px-4 mt-2 font-medium hover:opacity-90 transition-opacity duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Connexion
+            Valider
           </button>
         </form>
       </div>
@@ -99,4 +97,4 @@ function Login() {
   );
 }
 
-export default Login;
+export default SetPassword;
