@@ -1,5 +1,4 @@
 
-import React from "react";
 import { Trophy } from "lucide-react";
 
 type Candidate = {
@@ -83,11 +82,8 @@ function Result() {
         {/* ===================== HEADER ==================== */}
         {/* ================================================= */}
 
-        <header className="mb-8 text-center sm:mb-10">
+        <section className="mb-8 text-center sm:mb-10">
 
-          <p className="mb-2 text-sm font-bold uppercase tracking-[0.2em] text-[#2EC7D3]">
-            Élection présidentielle
-          </p>
 
           <h1 className="text-3xl font-black text-[#3C3C3B] sm:text-5xl">
             Résultats du scrutin
@@ -98,7 +94,7 @@ function Result() {
             scrutin.
           </p>
 
-        </header>
+        </section>
 
         {/* ================================================= */}
         {/* ================= CARD GAGNANT ================== */}
@@ -469,13 +465,7 @@ function Result() {
         {/* ================= FOOTER GLOBAL ================= */}
         {/* ================================================= */}
 
-        <footer className="border-t border-gray-200 pt-6 text-center text-sm text-gray-500">
-
-          <p>
-            Élection présidentielle — Résultats du scrutin
-          </p>
-
-        </footer>
+    
 
       </div>
     </main>
