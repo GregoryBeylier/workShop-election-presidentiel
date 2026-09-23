@@ -10,4 +10,8 @@ public interface CandidatRepository extends JpaRepository<Candidat, Integer> {
 
 	List<Candidat> findByPeriodeIdPeriodeOrderByIdCandidat(Integer idPeriode);
 
+	List<Candidat> findByInscriptionUtilisateurIdUtilisateur(Integer idUtilisateur);
+
+	boolean existsByInscriptionIdInscription(Integer idInscription);
+
 }

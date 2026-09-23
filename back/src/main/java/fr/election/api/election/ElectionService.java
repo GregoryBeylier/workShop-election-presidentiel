@@ -13,6 +13,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import fr.election.api.election.dto.CandidatDto;
+import fr.election.api.election.dto.DuelDto;
+import fr.election.api.election.dto.MonVoteDto;
+import fr.election.api.election.dto.PeriodeDto;
+import fr.election.api.election.dto.ResultatCandidatDto;
+import fr.election.api.election.dto.ResultatsDto;
 import fr.election.api.model.Affrontement;
 import fr.election.api.model.Bulletin;
 import fr.election.api.model.Candidat;
@@ -135,10 +141,14 @@ public class ElectionService {
 	@Transactional(readOnly = true)
 	public ResultatsDto resultats() {
 		PeriodeVote periode = periodeEnCours();
-		if (periode.isStatut()) {
+		if (!PeriodeVote.CLOS.equals(periode.getEtat())) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT, "Les résultats seront publiés à la clôture");
 		}
+		return new ResultatsDto(versDto(periode), classement(periode));
+	}
 
+	// Classement de la période, calculé à partir des lignes de vote (appelé dans une transaction)
+	public List<ResultatCandidatDto> classement(PeriodeVote periode) {
 		Map<Integer, Score> scores = new LinkedHashMap<>();
 		for (Candidat candidat : candidatRepository.findByPeriodeIdPeriodeOrderByIdCandidat(periode.getIdPeriode())) {
 			scores.put(candidat.getIdCandidat(), new Score(CandidatDto.de(candidat)));
@@ -159,21 +169,21 @@ public class ElectionService {
 			}
 		}
 
-		List<ResultatCandidatDto> classement = scores.values().stream()
+		return scores.values().stream()
 			.map(Score::versDto)
 			.sorted(Comparator.comparing(ResultatCandidatDto::points).reversed())
 			.toList();
-		return new ResultatsDto(versDto(periode), classement);
 	}
 
-	private PeriodeVote periodeEnCours() {
+	public PeriodeVote periodeEnCours() {
 		return periodeRepository.findFirstByOrderByIdPeriodeDesc()
 			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Aucun scrutin"));
 	}
 
-	private PeriodeDto versDto(PeriodeVote periode) {
+	public PeriodeDto versDto(PeriodeVote periode) {
 		int nbDuels = affrontementRepository.findByPeriode(periode.getIdPeriode()).size();
-		return new PeriodeDto(periode.getIdPeriode(), periode.isStatut(), periode.getOuvertLe(), periode.getClosLe(),
+		return new PeriodeDto(periode.getIdPeriode(), periode.getEtat(), periode.isStatut(), periode.getOuvertLe(),
+				periode.getClosLe(),
 				nbDuels, inscriptionRepository.countByPeriodeIdPeriode(periode.getIdPeriode()),
 				nbDuels == 0 ? 0 : bulletinRepository.countComplets(periode.getIdPeriode(), nbDuels));
 	}

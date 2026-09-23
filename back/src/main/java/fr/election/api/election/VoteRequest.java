@@ -1,5 +1,0 @@
-package fr.election.api.election;
-
-// idCandidatChoisi null = duel passé, compté comme une égalité
-public record VoteRequest(Integer idCandidatChoisi) {
-}

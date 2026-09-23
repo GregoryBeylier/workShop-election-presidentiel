@@ -7,11 +7,14 @@ export interface Candidat {
   parti: string;
 }
 
+export type EtatScrutin = "PREPARATION" | "OUVERT" | "CLOS";
+
 export interface Periode {
   id: number;
+  etat: EtatScrutin;
   ouverte: boolean;
   ouvertLe: string | null; // "YYYY-MM-DD"
-  closLe: string | null;
+  closLe: string | null; // clôture prévue si OUVERT, effective si CLOS
   nbDuels: number;
   nbInscrits: number;
   nbVotants: number; // électeurs ayant voté tous les duels
@@ -44,7 +47,6 @@ export interface Resultats {
 
 export interface Profil {
   email: string;
-  matricule: string;
   admin: boolean;
 }
 
@@ -63,15 +65,3 @@ export const voter = (idDuel: number, idCandidatChoisi: number | null) =>
 export const getResultats = () => apiFetch<Resultats>("/resultats");
 
 export const getProfil = () => apiFetch<Profil>("/auth/me");
-
-/**
- * Fin du scrutin : clos_le est une date, le scrutin se termine à la fin de ce jour-là.
- */
-export function dateCloture(periode: Periode): Date | null {
-  return periode.closLe ? new Date(`${periode.closLe}T23:59:59`) : null;
-}
-
-/** "12 avril" */
-export function formatJour(date: Date): string {
-  return date.toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
-}

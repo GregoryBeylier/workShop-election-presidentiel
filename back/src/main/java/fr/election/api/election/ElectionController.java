@@ -13,6 +13,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import fr.election.api.election.dto.CandidatDto;
+import fr.election.api.election.dto.MonVoteDto;
+import fr.election.api.election.dto.PeriodeDto;
+import fr.election.api.election.dto.ResultatsDto;
+import fr.election.api.election.dto.VoteRequest;
+
 // Toutes ces routes exigent un JWT valide (voir SecurityConfig) ; sub = id de l'utilisateur
 @RestController
 @RequestMapping("/api")
