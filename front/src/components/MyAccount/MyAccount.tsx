@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserRound, Lock, Bell, CheckSquare, BadgeCheck } from "lucide-react";
+import { logout } from "../../api/auth";
 import { mockElecteurs } from "../../data/mockData";
 
 type Tab = "informations" | "securite" | "notifications" | "vote";
@@ -44,8 +45,8 @@ function MyAccount() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    navigate("/login");
+    logout();
+    navigate("/login", { replace: true });
   };
 
   return (

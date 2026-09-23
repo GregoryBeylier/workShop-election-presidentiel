@@ -1,7 +1,7 @@
 import { useState, type SubmitEvent } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { login } from "../../api/auth";
+import { Navigate, useNavigate } from "react-router-dom";
+import { getRole, homePath, login } from "../../api/auth";
 import logo from "../../assets/mydigitalschool-logo.png";
 
 /**
@@ -17,13 +17,19 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // Déjà connecté : inutile de repasser par le formulaire
+  const role = getRole();
+  if (role) {
+    return <Navigate to={homePath(role)} replace />;
+  }
+
   const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
     try {
-      await login(email, password);
-      navigate("/", { replace: true });
+      const { admin } = await login(email, password);
+      navigate(homePath(admin ? "ADMIN" : "ELECTEUR"), { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Connexion impossible");
     } finally {

@@ -36,7 +36,8 @@ public class SecurityConfig {
 	@Value("${app.jwt.secret}")
 	private String jwtSecret;
 
-	// Seules la santé et la connexion sont publiques ; tout le reste exige un JWT valide
+	// Seules la santé et la connexion sont publiques ; /api/admin/** exige le rôle ADMIN
+	// (claim scope du JWT => autorité SCOPE_ADMIN) ; tout le reste exige un JWT valide
 	@Bean
 	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		http
@@ -46,6 +47,7 @@ public class SecurityConfig {
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 				.requestMatchers("/api/health", "/api/auth/login", "/error").permitAll()
+				.requestMatchers("/api/admin/**").hasAuthority("SCOPE_ADMIN")
 				.anyRequest().authenticated())
 			.oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
 		return http.build();

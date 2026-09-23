@@ -8,6 +8,7 @@ import {
   ChevronDown,
   LogOut,
 } from "lucide-react";
+import { getRole, logout } from "../../api/auth";
 import logo from "../../assets/mydigitalschool-logo.png";
 
 function Navbar() {
@@ -39,10 +40,11 @@ function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Vide toute la session locale et renvoie sur la page de connexion
   const handleLogout = () => {
-    localStorage.removeItem("token");
+    logout();
     setIsMenuOpen(false);
-    navigate("/login");
+    navigate("/login", { replace: true });
   };
 
   return (
@@ -122,7 +124,9 @@ function Navbar() {
                 <p className="text-sm font-medium text-gray-900">
                   {firstName} {lastNameInitial}
                 </p>
-                <p className="text-xs text-gray-500">Électeur</p>
+                <p className="text-xs text-gray-500">
+                  {getRole() === "ADMIN" ? "Administrateur" : "Électeur"}
+                </p>
               </div>
 
               <Link
