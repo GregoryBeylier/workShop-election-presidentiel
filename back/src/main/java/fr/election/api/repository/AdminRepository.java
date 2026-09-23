@@ -6,4 +6,6 @@ import fr.election.api.model.Admin;
 
 public interface AdminRepository extends JpaRepository<Admin, Integer> {
 
+	boolean existsByUtilisateurIdUtilisateur(Integer idUtilisateur);
+
 }
