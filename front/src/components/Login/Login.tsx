@@ -31,10 +31,10 @@ function Login() {
         className="absolute top-6 left-6 h-10"
       />
 
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center px-4">
         <form
           onSubmit={handleSubmit}
-          className="bg-white rounded-xl shadow p-8 w-96 flex flex-col gap-4"
+          className="bg-white rounded-xl shadow p-6 sm:p-8 w-full max-w-sm flex flex-col gap-4"
         >
           <h1 className="text-2xl font-heading font-bold text-brand-dark">
             Connexion

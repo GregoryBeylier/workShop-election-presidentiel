@@ -5,6 +5,8 @@ import SetPassword from "./components/SetPassword/SetPassword";
 import ElectorHome from "./components/ElectorHome/ElectorHome";
 import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
 import Result from "./components/result/result";
+import MyAccount from "./components/MyAccount/MyAccount";
+import Vote from "./components/Vote/Vote";
 
 function App() {
   return (
@@ -25,7 +27,22 @@ function App() {
             }
           />
           <Route path="/resultats" element={<Result />} />
-          {/* on ajoutera /vote, /mon-compte ici plus tard */}
+          <Route
+            path="/mon-compte"
+            element={
+              <ProtectedRoute>
+                <MyAccount />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vote"
+            element={
+              <ProtectedRoute>
+                <Vote />
+              </ProtectedRoute>
+            }
+          />
         </Route>
       </Routes>
     </BrowserRouter>

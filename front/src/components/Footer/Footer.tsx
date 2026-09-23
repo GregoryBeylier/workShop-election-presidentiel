@@ -7,7 +7,7 @@ function Footer() {
 
   return (
     <footer className="bg-brand-dark text-gray-300">
-      <div className="max-w-6xl mx-auto px-8 py-12 grid grid-cols-1 md:grid-cols-3 gap-10">
+      <div className="max-w-6xl mx-auto px-4 sm:px-8 py-10 sm:py-12 grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-10">
         {/* Colonne marque */}
         <div>
           <div className="flex items-center gap-3 mb-4">
@@ -101,7 +101,7 @@ function Footer() {
       </div>
 
       <div className="border-t border-white/10">
-        <div className="max-w-6xl mx-auto px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-500">
+        <div className="max-w-6xl mx-auto px-4 sm:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-500 text-center sm:text-left">
           <span>
             © {year} MyDigitalSchool — projet étudiant, à but pédagogique
           </span>
