@@ -6,7 +6,7 @@ import {
   Users,
   Clock3,
   Info,
-} from "lucide-react"; 
+} from "lucide-react";
 
 function Waiting() {
   const targetDate = new Date("2026-04-12T20:00:00");
@@ -24,7 +24,6 @@ function Waiting() {
     }
 
     return {
-
       hours: Math.floor(
         (difference / (1000 * 60 * 60)) % 24
       ),
@@ -66,7 +65,9 @@ function Waiting() {
 
       <div className="mx-auto max-w-4xl">
 
-    
+        {/* =========================
+            HEADER
+        ========================= */}
         <section className="mb-8 text-center sm:mb-10">
 
           <h1 className="text-3xl font-black text-[#3C3C3B] sm:text-5xl">
@@ -153,9 +154,8 @@ function Waiting() {
               </p>
 
 
-              <div className="grid grid-cols-4 gap-2 sm:gap-4">
-
-
+              {/* 3 BLOCS : HEURES / MINUTES / SECONDES */}
+              <div className="grid grid-cols-3 gap-2 sm:gap-4">
 
                 {/* HEURES */}
                 <div className="rounded-2xl bg-[#3C3C3B] p-3 sm:p-5">
@@ -323,16 +323,18 @@ function Waiting() {
 
 
         {/* =========================
-            MESSAGE
+            MESSAGE D'INFORMATION
         ========================= */}
         <div className="mt-8 flex items-start justify-center gap-3 px-4">
 
-        <Info className="mt-0.5 h-5 w-5 shrink-0 text-[#2EC7D3]" />
+          <Info className="mt-0.5 h-5 w-5 shrink-0 text-[#2EC7D3]" />
 
-            <p className="text-left text-sm leading-6 text-gray-500 sm:text-base">
-                Aucun score n’est visible avant la clôture :
-                cela évite d’influencer les derniers votants.
-            </p>
+          <p className="text-left text-sm leading-6 text-gray-500 sm:text-base">
+
+            Aucun score n’est visible avant la clôture :
+            cela évite d’influencer les derniers votants.
+
+          </p>
 
         </div>
 
@@ -343,4 +345,3 @@ function Waiting() {
 }
 
 export default Waiting;
-
