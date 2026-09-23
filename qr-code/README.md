@@ -61,6 +61,26 @@ Les refus métier sont renvoyés en HTTP 200 ; `401` si le votant ou la tablette
 - **Polling** au lieu du WebSocket : la tablette interroge le serveur chaque seconde et ne redessine le QR
   que s'il a changé. Si le serveur ne répond plus, elle masque le QR dès qu'il expire et affiche « Hors ligne ».
 
+## Installation d'un poste isoloir
+
+Le poste isoloir peut être une tablette ou un PC branché sur un écran : la page `/isoloir/:id`
+s'affiche dans n'importe quel navigateur récent. Chaque écran a sa propre adresse
+(`/isoloir/1`, `/isoloir/2`…) et sa propre clé.
+
+- [ ] **Le serveur (back + front) tourne sur une machine du staff**, jamais sur le poste isoloir :
+      sinon, un accès au poste donnerait accès à la base et à toutes les clés.
+- [ ] **Seul l'écran est dans l'isoloir.** Pas de clavier ni de souris à portée : avec un clavier,
+      on peut sortir du plein écran et lire la clé de l'isoloir (F12). Tablette : fixée, en mode kiosque.
+- [ ] **Mode kiosque** (plein écran sans barre d'adresse) :
+      `chrome.exe --kiosk "https://<ip-serveur>:5173/isoloir/1?cle=<clé>"` (Windows) ou
+      `open -a "Google Chrome" --args --kiosk "https://<ip-serveur>:5173/isoloir/1?cle=<clé>"` (Mac).
+- [ ] **Mise en veille et économiseur d'écran désactivés.**
+- [ ] **Certificat accepté** une fois sur le poste avant le scrutin (tant qu'il est auto-signé).
+- [ ] **Zoom du navigateur à 100 %** et pas de reflet sur l'écran.
+- [ ] **Scan testé avec un vrai téléphone** sur chaque poste avant l'ouverture, puis indicateur « Connecté » vérifié.
+- [ ] **Historique du navigateur effacé** après la première ouverture (l'URL contenait la clé).
+- [ ] Poste perdu ou manipulé : changer sa clé (`cle_tablette_hash`) et sa clé de signature (`cle_hmac`).
+
 ## À faire lors de l'intégration dans l'appli
 
 1. Remplacer `X-User-Id` (`VotantCourant.java`, `api.ts`) par l'utilisateur du JWT.
