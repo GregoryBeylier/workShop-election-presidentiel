@@ -1,14 +1,19 @@
 import { useState } from "react";
 import { Info } from "lucide-react";
-import { retirerCandidat, type CandidatAdmin } from "../../../api/admin";
+import {
+  envoyerPhotoCandidat,
+  retirerCandidat,
+  supprimerPhotoCandidat,
+  type CandidatAdmin,
+} from "../../../api/admin";
 import type { EtatScrutin } from "../../../api/election";
 import Panneau from "../../../components/ui/Panneau";
 import ListeCandidats from "./ListeCandidats";
 import Alerte, { type Message } from "../../../components/ui/Alerte";
 
 /**
- * Onglet "Candidats" : liste des candidats du scrutin, retrait possible pendant
- * la préparation. L'inscription se fait dans l'onglet "Inscriptions".
+ * Onglet "Candidats" : liste des candidats du scrutin, photos modifiables,
+ * retrait possible pendant la préparation. L'inscription se fait dans l'onglet "Inscriptions".
  */
 function OngletCandidats({
   candidats,
@@ -35,6 +40,25 @@ function OngletCandidats({
     }
   };
 
+  // Les erreurs remontent à DepotPhoto, qui les affiche via onErreur
+  const changerPhoto = async ({ candidat }: CandidatAdmin, photo: Blob) => {
+    await envoyerPhotoCandidat(candidat.id, photo);
+    setMessage({
+      type: "succes",
+      texte: `Photo de ${candidat.prenom} ${candidat.nom} enregistrée.`,
+    });
+    onChange();
+  };
+
+  const supprimerPhoto = async ({ candidat }: CandidatAdmin) => {
+    await supprimerPhotoCandidat(candidat.id);
+    setMessage({
+      type: "succes",
+      texte: `Photo de ${candidat.prenom} ${candidat.nom} retirée.`,
+    });
+    onChange();
+  };
+
   return (
     <div className="flex flex-col gap-6">
       {!modifiable && (
@@ -51,6 +75,9 @@ function OngletCandidats({
           candidats={candidats}
           modifiable={modifiable}
           onRetirer={retirer}
+          onPhoto={changerPhoto}
+          onSupprimerPhoto={supprimerPhoto}
+          onErreur={(texte) => setMessage({ type: "erreur", texte })}
         />
       </Panneau>
 

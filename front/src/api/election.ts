@@ -5,7 +5,7 @@ export interface Candidat {
   prenom: string;
   nom: string;
   parti: string;
-  photo: string | null; // URL, null : on affiche les initiales
+  photo: string | null; // URL servie par le back, null : on affiche les initiales
 }
 
 export type EtatScrutin = "PREPARATION" | "OUVERT" | "CLOS";

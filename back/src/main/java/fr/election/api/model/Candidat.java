@@ -39,7 +39,7 @@ public class Candidat {
 	@Column(name = "parti", nullable = false, length = 100)
 	private String parti = "";
 
-	// URL de la photo du candidat (null : pas de photo, le front affiche les initiales)
+	// URL publique de la photo (table candidat_photo), null : pas de photo, le front affiche les initiales
 	@Column(name = "photo", length = 500)
 	private String photo;
 

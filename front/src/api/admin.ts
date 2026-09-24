@@ -53,7 +53,6 @@ export interface NouveauCandidat extends NouvelUtilisateur {
   prenom: string;
   nom: string;
   parti: string;
-  photo?: string; // URL facultative
 }
 
 export const getStats = () => apiFetch<Stats>("/admin/stats");
@@ -104,6 +103,21 @@ export const ajouterCandidat = (candidat: NouveauCandidat) =>
   apiFetch<Creation<CandidatAdmin>>("/admin/candidats", {
     method: "POST",
     body: candidat,
+  });
+
+/** Remplace la photo du candidat (image déjà redimensionnée, voir preparerPhoto). */
+export const envoyerPhotoCandidat = (idCandidat: number, photo: Blob) => {
+  const donnees = new FormData();
+  donnees.append("photo", photo, "photo.jpg");
+  return apiFetch<Candidat>(`/admin/candidats/${idCandidat}/photo`, {
+    method: "PUT",
+    body: donnees,
+  });
+};
+
+export const supprimerPhotoCandidat = (idCandidat: number) =>
+  apiFetch<Candidat>(`/admin/candidats/${idCandidat}/photo`, {
+    method: "DELETE",
   });
 
 export const retirerCandidat = (idCandidat: number) =>
