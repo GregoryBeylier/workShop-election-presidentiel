@@ -14,7 +14,8 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
 // Émargement dans un isoloir : révoque définitivement le vote via l'appli pour cette inscription.
-// Aucun lien avec le contenu du bulletin papier.
+// Ouvre aussi le vote sur la borne de l'isoloir tant que l'inscription n'a pas de bulletin.
+// Aucun lien avec le contenu du vote.
 @Entity
 @Table(name = "emargement_isoloir")
 public class EmargementIsoloir {

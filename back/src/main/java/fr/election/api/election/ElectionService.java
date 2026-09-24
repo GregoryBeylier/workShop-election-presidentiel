@@ -109,10 +109,10 @@ public class ElectionService {
 			.orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN,
 					"Vous n'êtes pas inscrit à ce scrutin"));
 
-		// Identifié à l'isoloir => il vote sur papier, plus en ligne (même en appelant l'API directement)
+		// Identifié à l'isoloir => il vote sur la borne, plus en ligne (même en appelant l'API directement)
 		if (emargementIsoloirRepository.findByInscription_IdInscription(inscription.getIdInscription()).isPresent()) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT,
-					"Vous êtes identifié dans un isoloir : votez sur le bulletin papier.");
+					"Vous êtes identifié dans un isoloir : votez sur la borne.");
 		}
 
 		Affrontement affrontement = affrontementRepository.findByPeriode(periode.getIdPeriode()).stream()

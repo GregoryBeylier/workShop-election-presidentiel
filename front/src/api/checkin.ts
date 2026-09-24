@@ -2,18 +2,27 @@ import { apiFetch, ApiError } from "./client";
 
 /**
  * Mode de vote (en ligne ou isoloir) et check-in QR de l'isoloir
- * (voir qr-code/spec-checkin-qr-isoloir.md).
+ * (voir qr-code/spec-checkin-qr-isoloir.md et borne/API.md).
+ * Le scan ouvre le vote sur la borne de l'isoloir : le votant vote ensuite avec ses boutons.
  * Le votant est identifié par son JWT : le back ignore toute autre identité envoyée par le front.
  */
 
 export type StatutVotant =
   | "not_voted"
-  | "voted_app"
-  | "checked_in_isoloir"
+  | "voted_app" // a commencé (ou fini) de voter en ligne
+  | "checked_in_isoloir" // scan fait : vote en cours sur la borne
+  | "voted_booth" // la borne a enregistré le bulletin
   | "not_registered";
 
 export interface ReponseCheckin {
-  status: "success" | "already_voted" | "expired_token" | "invalid_token" | "not_registered";
+  status:
+    | "success"
+    | "already_voted"
+    | "expired_token"
+    | "invalid_token"
+    | "not_registered"
+    | "booth_offline" // la borne ne répond plus
+    | "booth_busy"; // un autre votant est en train de voter sur cette borne
   message: string;
 }
 
@@ -31,7 +40,7 @@ export function getStatutVotant(): Promise<StatutVotant> {
   return apiFetch<{ status: StatutVotant }>("/voter/me/status").then((r) => r.status);
 }
 
-// Après le scan du QR affiché dans l'isoloir : révoque définitivement le vote en ligne
+// Après le scan du QR affiché dans l'isoloir : ouvre le vote sur la borne, révoque le vote en ligne
 export function checkin(qrToken: string) {
   return apiFetch<ReponseCheckin>("/checkin", { method: "POST", body: { qr_token: qrToken } });
 }
