@@ -1,5 +1,7 @@
 # Borne de vote — routes d'API
 
+> ⚠️ **Remplacé par [API.md](API.md) (v2)** : déverrouillage par le check-in QR de l'isoloir, routes `/api/borne/...` avec clé de borne. Ce document est gardé pour l'historique.
+
 **Version** : 1.1 — 24 septembre 2026 (un échange par duel : B3 `/choix` remplace `/bulletin`)
 **Pour** : équipe backend (et équipe front pour les routes marquées 📱)
 **Statut** : proposition de contrat. Les noms, codes HTTP et formats JSON peuvent être discutés, mais **une fois validés, ils ne bougent plus** : ils seront codés en dur dans la carte.

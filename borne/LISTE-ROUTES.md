@@ -1,5 +1,7 @@
 # Routes de la borne de vote
 
+> ⚠️ **Remplacé par [API.md](API.md) (v2)** : déverrouillage par le check-in QR de l'isoloir, routes `/api/borne/...` avec clé de borne. Ce document est gardé pour l'historique.
+
 Résumé pour l'équipe backend. Le détail (formats JSON, codes d'erreur, sécurité, tables SQL) est dans [ROUTES.md](ROUTES.md) (v1.1).
 
 | # | Méthode | Route | Appelée par | Auth | Ce que fait la route |

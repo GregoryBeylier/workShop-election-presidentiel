@@ -11,13 +11,14 @@ C'est le **canal A** de `Doc/infrastructure.md` : le vote qui garantit l'isoleme
 | Fichier | Pour qui | Contenu |
 |---|---|---|
 | **README.md** | tout le monde | Ce fichier : ce que fait la borne, son câblage, comment la flasher |
+| **[API.md](API.md)** | équipe backend, Léo | **Le contrat d'API à jour (v2)** : déverrouillage par le check-in QR de l'isoloir, clé de borne, routes `/api/borne/etat` et `/api/borne/choix`. Remplace ROUTES.md |
 | **[LISTE-ROUTES.md](LISTE-ROUTES.md)** | équipe backend | **Le résumé** : toutes les routes dans un tableau, une phrase par route |
 | **[ROUTES.md](ROUTES.md)** | équipe backend, équipe front | **Les routes d'API à créer.** Formats JSON, codes HTTP, tables SQL, scénario de test en `curl` |
 | **[firmware/IsoloireBuzzer/IsoloireBuzzer.ino](firmware/IsoloireBuzzer/IsoloireBuzzer.ino)** | équipe embarquée, curieux | Le programme de référence, testé sur le câblage réel. Hors ligne |
 | **[firmware/IsoloireConnecte/](firmware/IsoloireConnecte/)** | équipe embarquée | La même borne, connectée en Wi-Fi à l'API (v1 : échanges minimum) |
 | **[serveur-test/](serveur-test/README.md)** | tout le monde | Un faux backend (Python, fausse base) + tableau de bord, pour **tester tout le parcours sur un ordinateur avec la borne branchée** |
 
-**Équipe backend : commencez par [ROUTES.md](ROUTES.md) §1 et §2.** Vous n'avez pas besoin de lire le `.ino` pour travailler. Il est là pour voir *quand* la borne appelle chaque route (cherchez `>>> API` dans le fichier).
+**Équipe backend : commencez par [API.md](API.md).** ROUTES.md et LISTE-ROUTES.md décrivent l'ancien contrat (v1.1). Vous n'avez pas besoin de lire le `.ino` pour travailler. Il est là pour voir *quand* la borne appelle chaque route (cherchez `>>> API` dans le fichier).
 
 ---
 
@@ -29,7 +30,7 @@ C'est le **canal A** de `Doc/infrastructure.md` : le vote qui garantit l'isoleme
 | Scrutin local : duels, boutons, jingle, dépouillement | ✅ fonctionne |
 | Remise à zéro sans redémarrer (appui long 5 s sur C) | ✅ fonctionne |
 | Wi-Fi, appels API, déverrouillage par l'app | 🧪 **v1 écrite** ([IsoloireConnecte](firmware/IsoloireConnecte/)), à valider sur la borne avec le [serveur de test](serveur-test/README.md) |
-| Branchement sur le vrai backend Spring | ❌ pas encore : les routes de [ROUTES.md](ROUTES.md) sont à créer côté backend |
+| Branchement sur le vrai backend Spring | ❌ pas encore : les routes de [API.md](API.md) sont à créer côté backend |
 
 Le programme de référence fait voter **en local** : les voix sont comptées dans la carte et affichées sur la console. La version connectée remplace ce comptage local par les appels décrits dans [ROUTES.md](ROUTES.md). En attendant le backend, elle se teste contre `serveur-test/serveur.py`, qui implémente ces mêmes routes.
 
@@ -164,4 +165,4 @@ Le programme s'adapte tout seul à `NB_CANDIDATS` (duels, chenillard, dépouille
 1. compléter les tableaux `NOMS`, `LED_GAUCHE` et `LED_DROITE` ;
 2. câbler les LED en plus. Il reste 3 GPIO libres (4, 10, 21), soit **un seul candidat de plus** au maximum sur cette carte (2 LED par candidat).
 
-Côté serveur, la borne vérifiera que le `nbCandidats` renvoyé par l'API correspond à ce qui est câblé (voir [ROUTES.md](ROUTES.md), B2).
+Côté serveur, la borne vérifiera que le `nbCandidats` renvoyé par l'API correspond à ce qui est câblé (voir [API.md](API.md), B2).
