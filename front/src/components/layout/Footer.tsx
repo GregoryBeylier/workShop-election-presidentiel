@@ -103,7 +103,7 @@ function Footer() {
           <span>
             © {year} MyDigitalSchool — projet étudiant, à but pédagogique
           </span>
-          <span>Fait avec ♥ par les étudiants du Bachelor Dev Web</span>
+          <span>Fait avec ♥ par les Dev</span>
         </div>
       </div>
     </footer>
