@@ -24,14 +24,17 @@ public class JwtService {
 		this.duree = duree;
 	}
 
-	// sub = id de l'utilisateur ; scope = ADMIN ou ELECTEUR (devient l'autorité SCOPE_xxx côté Spring)
+	// Tant que le mot de passe est provisoire, seul le changement de mot de passe est autorisé
+	public static final String SCOPE_CHANGEMENT_MDP = "CHANGEMENT_MDP";
+
+	// sub = id de l'utilisateur ; scope = ADMIN, ELECTEUR ou CHANGEMENT_MDP (devient l'autorité SCOPE_xxx côté Spring)
 	public String generer(Utilisateur utilisateur, boolean admin) {
 		Instant maintenant = Instant.now();
 		JwtClaimsSet claims = JwtClaimsSet.builder()
 			.issuer("election-api")
 			.subject(String.valueOf(utilisateur.getIdUtilisateur()))
 			.claim("email", utilisateur.getEmail())
-			.claim("scope", admin ? "ADMIN" : "ELECTEUR")
+			.claim("scope", utilisateur.isMotDePasseProvisoire() ? SCOPE_CHANGEMENT_MDP : admin ? "ADMIN" : "ELECTEUR")
 			.issuedAt(maintenant)
 			.expiresAt(maintenant.plus(duree))
 			.build();

@@ -1,11 +1,12 @@
-
+import React from "react";
 import { Trophy, Clock } from "lucide-react";
 
 // Statut du scrutin, renvoyé par le back plus tard (ex: GET /scrutin/statut).
-// "ouvert"             → le vote n'est pas terminé, pas de résultats à montrer
-// "cloture_en_attente" → le vote est clos mais les résultats ne sont pas encore publiés
-// "publie"             → les résultats peuvent être affichés
+// "ouvert"            → le vote n'est pas terminé, pas de résultats à montrer
+// "cloture_en_attente" → le vote est clos mais les résultats ne sont pas encore publiés (dépouillement)
+// "publie"            → les résultats peuvent être affichés
 type ScrutinStatus = "ouvert" | "cloture_en_attente" | "publie";
+
 type Candidate = {
   id: number;
   firstName: string;

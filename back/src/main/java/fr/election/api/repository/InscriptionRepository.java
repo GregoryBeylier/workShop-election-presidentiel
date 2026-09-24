@@ -1,5 +1,6 @@
 package fr.election.api.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -22,5 +23,11 @@ public interface InscriptionRepository extends JpaRepository<Inscription, Intege
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query(INSCRIPTION_PERIODE_OUVERTE)
 	Optional<Inscription> findPeriodeOuverteForUpdate(@Param("idUtilisateur") Integer idUtilisateur);
+
+	Optional<Inscription> findByUtilisateurIdUtilisateurAndPeriodeIdPeriode(Integer idUtilisateur, Integer idPeriode);
+
+	List<Inscription> findByPeriodeIdPeriode(Integer idPeriode);
+
+	long countByPeriodeIdPeriode(Integer idPeriode);
 
 }
