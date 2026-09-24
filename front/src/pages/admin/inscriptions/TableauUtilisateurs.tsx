@@ -1,10 +1,6 @@
 import { useState } from "react";
 import { KeyRound, Search, Trash2 } from "lucide-react";
-import type {
-  StatutCompte,
-  StatutVote,
-  UtilisateurAdmin,
-} from "../../../api/admin";
+import type { StatutCompte, UtilisateurAdmin } from "../../../api/admin";
 import Badge, { type CouleurBadge } from "../../../components/ui/Badge";
 
 const compte: Record<StatutCompte, [string, CouleurBadge]> = {
@@ -12,11 +8,10 @@ const compte: Record<StatutCompte, [string, CouleurBadge]> = {
   PROVISOIRE: ["Mot de passe provisoire", "teal"],
 };
 
-const vote: Record<StatutVote, [string, CouleurBadge]> = {
-  AUCUN: ["Pas voté", "gray"],
-  EN_COURS: ["En cours", "teal"],
-  TERMINE: ["A voté", "green"],
-};
+/** "2026-09-24" (ISO) => "24/09/2026" */
+function formaterDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("fr-FR");
+}
 
 /** Liste des utilisateurs avec recherche, statuts et actions (mot de passe, suppression RGPD). */
 function TableauUtilisateurs({
@@ -55,7 +50,7 @@ function TableauUtilisateurs({
             <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
               <th className="py-2 pr-3 font-semibold">Utilisateur</th>
               <th className="py-2 pr-3 font-semibold">Compte</th>
-              <th className="py-2 pr-3 font-semibold">Vote</th>
+              <th className="py-2 pr-3 font-semibold">Créé le</th>
               <th className="py-2 text-right font-semibold">Actions</th>
             </tr>
           </thead>
@@ -74,14 +69,8 @@ function TableauUtilisateurs({
                     {compte[u.statutCompte][0]}
                   </Badge>
                 </td>
-                <td className="py-3 pr-3">
-                  {u.inscrit ? (
-                    <Badge couleur={vote[u.statutVote][1]}>
-                      {vote[u.statutVote][0]}
-                    </Badge>
-                  ) : (
-                    <span className="text-xs text-gray-400">Non inscrit</span>
-                  )}
+                <td className="py-3 pr-3 text-gray-600">
+                  {formaterDate(u.creeLe)}
                 </td>
                 <td className="py-3">
                   <div className="flex justify-end gap-1">
