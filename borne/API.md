@@ -192,7 +192,7 @@ Emma, 3 candidats : Moreau (LED 0), Fontaine (LED 1), Belkacem (LED 2).
          │                              │ bulletin + 3 lignes_vote       │
          │                              │── TERMINE ────────────────────►│  arpège long, LED éteintes
          │── GET /api/voter/me/status ─►│                                │
-         │◄── voted_app ────────────────│                                │
+         │◄── voted_booth ──────────────│                                │
  « Merci, votre vote est enregistré »   │◄──── GET /api/borne/etat ──────│  LIBRE : prête pour le suivant
 ```
 
@@ -203,8 +203,9 @@ Le téléphone et la borne ne se parlent jamais. Le lien entre les deux, c'est *
 | Moment | `status` |
 |---|---|
 | Avant le scan | `not_voted` |
-| Scan fait, vote en cours sur la borne | `voting_on_booth` (nouveau) |
-| Bulletin écrit | `voted_app` |
+| Scan fait, vote en cours sur la borne | `checked_in_isoloir` |
+| Bulletin écrit par la borne | `voted_booth` (nouveau) |
+| A voté (ou commencé à voter) en ligne | `voted_app` |
 | Pas inscrit à la période ouverte | `not_registered` |
 
 ### Refus du check-in liés à la borne (nouveaux)
@@ -256,6 +257,8 @@ CREATE TABLE choix_provisoire (
 
 - **Vote ouvert sur une borne** = un `emargement_isoloir` de cet isoloir dont l'inscription n'a pas encore de `bulletin`.
 - **Borne occupée** : le check-in verrouille la ligne `isoloir` (`SELECT … FOR UPDATE`) pour que deux votants qui scannent en même temps ne l'ouvrent pas tous les deux.
+- **Heure en UTC** : `derniere_activite_borne` est écrite avec le `Clock` du back (`CheckinConfig`, UTC), comme le check-in qui la compare. Toujours utiliser ce bean, jamais `LocalDateTime.now()` sans horloge.
+- **Déjà côté check-in** (fait) : colonnes et entité `Isoloir`, `EmargementIsoloirRepository.existsVoteOuvert`, refus `booth_offline` / `booth_busy`, statut `voted_booth`. SQL : `qr-code/sql/migration-borne.sql`.
 - **Un seul verrou contre le double vote** : check-in, vote en ligne et dernier duel de la borne passent tous par `findPeriodeOuverteForUpdate` sur l'inscription.
 
 ---

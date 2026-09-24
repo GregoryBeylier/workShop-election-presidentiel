@@ -1,25 +1,28 @@
-# Sécurité du vote : check-in QR isoloir
+# Sécurité du vote : check-in QR isoloir et borne
 
 Ce que protège le système, comment il le fait, et les failles qui restent. Tout est vérifiable dans le code :
-`back/src/main/java/fr/election/api/checkin/`, `front/src/pages/vote/` et `front/src/pages/isoloir/`.
+`back/src/main/java/fr/election/api/checkin/`, `front/src/pages/vote/`, `front/src/pages/isoloir/`, et le contrat
+de la borne dans [borne/API.md](../borne/API.md).
 
 **Sommaire** : [L'enjeu](#1-lenjeu) · [Les deux modes](#2-les-deux-modes) · [Les attaquants](#3-les-attaquants) ·
-[Anatomie d'un QR](#4-anatomie-dun-qr) · [Les 6 protections](#5-les-6-protections) · [Parcours d'un scan](#6-parcours-dun-scan) ·
+[Anatomie d'un QR](#4-anatomie-dun-qr) · [Les 8 protections](#5-les-8-protections) · [Parcours d'un vote à l'isoloir](#6-parcours-dun-vote-à-lisoloir) ·
 [Attaque par attaque](#7-attaque-par-attaque) · [Failles restantes](#8-failles-restantes) · [Avant le jour J](#9-avant-le-jour-j) · [Quiz](#10-quiz)
 
 ---
 
 ## 1. L'enjeu
 
-Chaque électeur a **un seul droit de vote**, qu'il peut utiliser **en ligne** (les duels) *ou* **à l'isoloir** (bulletin papier).
-Le système répond à une question : *cette personne a-t-elle déjà utilisé son droit, et par quel moyen ?*
+Chaque électeur a **un seul droit de vote**, qu'il peut utiliser **en ligne** (les duels sur son téléphone) *ou*
+**à l'isoloir**, sur la **borne** : une carte ESP32 avec 6 LED et 3 boutons, qui fait jouer les mêmes duels.
+Le bulletin papier n'existe plus qu'en **secours**, en cas de panne.
 
-Le check-in isoloir est une **feuille d'émargement numérique**. Il ne touche jamais au **contenu** du bulletin papier :
-on sait qui s'est présenté à quel isoloir, jamais pour qui il a voté.
+Un isoloir, c'est donc **un écran** qui affiche un QR qui change toutes les 5 s, et **une borne**. Le scan du QR avec
+l'appli fait deux choses : il prouve que le votant est **devant l'écran**, et il **ouvre son vote sur la borne**.
 
-« Truquer » peut donc vouloir dire deux choses :
-- **Voter deux fois** : une fois en ligne, une fois sur papier.
-- **Empêcher quelqu'un de voter** : utiliser son droit à sa place pour qu'il ne puisse plus voter.
+« Truquer » peut vouloir dire trois choses :
+- **Voter deux fois** : en ligne et sur la borne, ou deux fois sur la borne.
+- **Voter à la place de quelqu'un** : utiliser son droit pour qu'il ne puisse plus voter.
+- **Fausser le décompte** : faire compter un vote incomplet, ou un choix qui n'a pas été fait.
 
 ## 2. Les deux modes
 
@@ -28,9 +31,10 @@ C'est au moment de la confirmation que le serveur enregistre le choix et ferme l
 
 | | Voter en ligne | Voter à l'isoloir |
 |---|---|---|
-| Parcours | `/vote/en-ligne` → avertissement → **Commencer** → duels | `/vote/isoloir` → avertissement → **scan du QR** → bulletin papier |
-| Ce que fait le serveur | Crée le **bulletin en ligne** (encore vide) dès le clic | Crée l'**émargement** au scan |
-| Ce qui est alors bloqué | Le scan à l'isoloir, même si les duels ne sont pas finis | « Commencer » et chaque vote en ligne, même sans bulletin papier |
+| Parcours | `/vote/en-ligne` → avertissement → **Commencer** → duels sur le téléphone | `/vote/isoloir` → avertissement → **scan du QR** → duels sur la borne |
+| Ce que fait le serveur | Crée le **bulletin en ligne** (encore vide) dès le clic | Crée l'**émargement** au scan : le vote est ouvert sur la borne de cet isoloir |
+| Quand le vote est fini | Après le dernier duel sur le téléphone | Au dernier duel sur la borne, le serveur écrit le bulletin d'un coup |
+| Ce qui est alors bloqué | Le scan à l'isoloir, même si les duels ne sont pas finis | « Commencer » et chaque vote en ligne |
 
 > Le front masque les boutons qui ne servent plus, mais c'est du confort : **c'est le serveur qui refuse**.
 > Quelqu'un qui appelle l'API à la main se heurte aux mêmes refus.
@@ -41,9 +45,9 @@ En sécurité, on commence toujours par se demander *qui* pourrait attaquer et a
 
 | Qui | Ce qu'il a | Ce qu'il veut |
 |---|---|---|
-| Le votant tricheur | Son téléphone, son compte, un peu de culture technique (Postman, outils du navigateur) | Voter en ligne *et* sur papier |
-| Le petit malin du Wi-Fi | Un PC sur le même réseau, des outils pour envoyer des requêtes à la main | Voter à la place d'autres personnes, casser le système « pour voir » |
-| La personne dans l'isoloir | Un accès physique au poste isoloir pendant une minute | Lire les secrets du poste, prendre le QR en photo |
+| Le votant tricheur | Son téléphone, son compte, un peu de culture technique (Postman, outils du navigateur) | Voter deux fois |
+| Le petit malin du Wi-Fi | Un PC sur le même réseau, des outils pour envoyer des requêtes à la main | Voter à la place d'autres personnes, se faire passer pour une borne |
+| La personne dans l'isoloir | Un accès physique à l'écran et à la borne pendant une minute | Lire les secrets du poste, filmer le QR, bricoler la borne |
 | Quelqu'un avec l'accès à la base | Le mot de passe Neon | Tout. On ne peut pas s'en protéger avec du code (voir [failles](#8-failles-restantes)) |
 
 ## 4. Anatomie d'un QR
@@ -63,7 +67,7 @@ CHK1 . 1 . 358034432 . 1790172170000 . 5Tavduw4dldadgwzJEM61bR_r1NurnIYneXkcayrn
 Tout le monde peut lire ce texte, et ce n'est pas grave : il n'y a **rien de secret dedans**.
 Ce qui compte, c'est que **personne ne peut en fabriquer un valide** sans la clé secrète du serveur.
 
-## 5. Les 6 protections
+## 5. Les 8 protections
 
 ### 5.1 Identité par JWT
 *Une carte d'électeur tamponnée par la mairie, pas un nom écrit sur un papier.*
@@ -103,6 +107,9 @@ et **seule l'horloge du serveur compte**. Une photo prise la veille, ou même un
 
 Pourquoi accepter la fenêtre suivante ? Pour qu'un votant qui scanne pile au moment où le QR change ne soit pas refusé.
 
+C'est la grosse différence avec le premier projet de borne, qui prévoyait un **autocollant QR fixe** : une photo
+suffisait pour déverrouiller la borne depuis n'importe où.
+
 ### 5.4 Clé du poste isoloir
 *Seul le guichet a le droit de sortir des tickets.*
 
@@ -122,11 +129,13 @@ mot de passe. Même quelqu'un qui lit la base ne peut pas s'en servir.
 Imagine un scan et un clic sur « Commencer » qui arrivent **à la même milliseconde**. Sans précaution, chacun lirait
 « rien n'est encore choisi » et les deux passeraient. C'est ce qu'on appelle une **situation de concurrence** (*race condition*).
 
-Les **trois** actions qui utilisent le droit de vote prennent le **même verrou** sur l'inscription de l'électeur
+Les actions qui utilisent le droit de vote prennent le **même verrou** sur l'inscription de l'électeur
 (`SELECT … FOR UPDATE`). Elles passent donc une par une, et chacune vérifie l'autre mode :
-- **le scan** (`CheckinService.checkin`) : refusé si un bulletin en ligne existe ;
+- **le scan** (`CheckinService.checkin`) : refusé si un bulletin existe ;
 - **« Commencer »** (`commencerVoteEnLigne`) : refusé si un émargement existe ;
-- **chaque vote de duel** (`ElectionService.voter`) : refusé (409) si un émargement existe.
+- **chaque vote de duel en ligne** (`ElectionService.voter`) : refusé (409) si un émargement existe ;
+- **le dernier duel sur la borne** (route de l'autre équipe) : doit prendre ce même verrou avant d'écrire le bulletin
+  ([API.md §5](../borne/API.md)).
 
 En plus, une **contrainte unique** sur `emargement_isoloir.id_inscription` et sur `bulletin.id_inscription` sert de
 filet de sécurité dans la base.
@@ -134,30 +143,66 @@ filet de sécurité dans la base.
 > Tests : `scansSimultanesUnSeulEmargement`, `clicEnLigneEtScanSimultanesUnSeulGagne` et
 > `voteEnLigneEtScanSimultanesJamaisLesDeux` : 10 actions en parallèle, jamais les deux modes.
 
-### 5.6 HTTPS
-*Une enveloppe scellée plutôt qu'une carte postale.*
+### 5.6 Une borne, un votant à la fois
+*Un seul électeur derrière le rideau.*
 
-Tout ce qui passe sur le Wi-Fi doit être chiffré : quelqu'un qui écoute le réseau voit alors des données illisibles,
-y compris les JWT. C'est aussi une obligation technique : sans HTTPS, les navigateurs mobiles refusent la caméra, et donc le scan.
+Au scan, avant d'ouvrir le vote, le serveur **verrouille la ligne de l'isoloir** puis vérifie que sa borne :
+- est **en ligne** : elle a appelé le serveur il y a moins de 10 s, sinon `booth_offline` ;
+- est **libre** : aucun autre votant n'y a de vote ouvert (émargé, sans bulletin), sinon `booth_busy`.
 
-> Aujourd'hui, seul le serveur de dev (`npm run dev:https`) est en HTTPS, avec un certificat auto-signé.
-> La production n'est pas encore prête : voir [failles](#8-failles-restantes).
+Sans ce verrou, deux votants qui scannent le même isoloir en même temps ouvriraient tous les deux un vote sur la même
+borne. Dans les deux cas de refus, rien n'est écrit : le votant peut réessayer.
 
-## 6. Parcours d'un scan
+> Code : `CheckinService.checkin`, `IsoloirRepository.findByIdForUpdate`, `EmargementIsoloirRepository.existsVoteOuvert`.
+> Tests : `borneHorsLigneRefuse`, `borneOccupeeJusquAuBulletin`, `votantsSimultanesSurLaMemeBorneUnSeulPasse`.
+> Limite : sur H2, la base des tests, les scans passent déjà un par un. Le verrou de l'isoloir n'est vraiment mis à
+> l'épreuve que sur Postgres (Neon).
 
-Chaque vérification peut arrêter le scan. Le votant n'est émargé que si toutes passent.
+### 5.7 La borne obéit, et prouve qui elle est
+*Un bulletin ne sort que de la bonne urne.*
+
+La borne ne décide rien : elle **affiche** les deux candidats que le serveur lui donne et **transmet** le bouton appuyé.
+Elle ne sait pas qui vote et ne parle jamais au téléphone.
+
+À chaque appel, elle présente **sa clé** (`X-Borne-Cle`). Le serveur en déduit **de quel isoloir il s'agit** : la
+borne n'envoie jamais de numéro, elle ne peut donc pas se faire passer pour une autre. Comme pour l'écran, la base ne
+garde que l'empreinte SHA-256 (`cle_borne_hash`), et cette clé est **différente** de celle de l'écran : si l'une fuit,
+l'autre reste sûre.
+
+Le serveur vérifie aussi que chaque choix porte sur **le duel attendu**, et qu'un choix renvoyé deux fois après une
+coupure Wi-Fi **n'est pas compté deux fois**.
+
+> Contrat : [borne/API.md](../borne/API.md) §3 à §5. Ces vérifications sont dans les routes `/api/borne/...`,
+> **pas encore écrites** (autre équipe) : à relire quand elles arrivent.
+
+### 5.8 Un vote incomplet ne compte jamais
+*On ne compte que les bulletins entièrement remplis.*
+
+- **Sur la borne**, les choix restent **provisoires** jusqu'au dernier duel. Le bulletin et toutes ses lignes sont écrits
+  d'un seul coup, dans une transaction. Un vote pas fini ne laisse aucun demi-bulletin.
+- **Dans les résultats**, le classement et les statistiques ne lisent que les lignes des **bulletins complets**
+  (autant de lignes que de duels). Ça protège aussi le vote en ligne, qui écrit ses lignes duel par duel.
+
+> Code : `LigneVoteRepository.findCompletesByPeriode`. Test : `voteIncompletNeCompteDansLesResultats`.
+
+## 6. Parcours d'un vote à l'isoloir
+
+Chaque vérification peut arrêter le scan. Le vote n'est ouvert sur la borne que si toutes passent.
 
 ```mermaid
 sequenceDiagram
-    participant P as Poste isoloir
+    participant P as Écran isoloir
+    participant B as Borne ESP32
     participant S as Serveur
     participant T as Téléphone du votant
     loop chaque seconde
-        P->>S: QR actuel ? (avec la clé du poste)
+        P->>S: QR actuel ? (clé du poste)
         S-->>P: QR signé de la fenêtre en cours
     end
-    T->>S: Voter à l'isoloir (JWT)
-    S-->>T: Statut not_voted : page de scan + avertissement
+    loop toutes les 2 s
+        B->>S: GET /api/borne/etat (clé de la borne)
+        S-->>B: LIBRE
+    end
     T->>P: scanne le QR (caméra)
     T->>S: POST /checkin (QR + JWT)
     S->>S: 1. JWT valide ? sinon 401
@@ -165,12 +210,23 @@ sequenceDiagram
     S->>S: 3. Fenêtre actuelle ou précédente ? sinon expired_token
     S->>S: 4. Inscrit à la période ouverte ? sinon not_registered
     S->>S: 5. Verrouille l'inscription
-    S->>S: 6. Déjà émargé ailleurs ou bulletin en ligne ? sinon already_voted
-    S->>S: 7. Crée l'émargement + écrit le journal
-    S-->>T: Identification réussie
+    S->>S: 6. Déjà un bulletin ou émargé ailleurs ? sinon already_voted
+    S->>S: 7. Verrouille l'isoloir : borne en ligne ? libre ? sinon booth_offline / booth_busy
+    S->>S: 8. Crée l'émargement (vote ouvert) + écrit le journal
+    S-->>T: Votez sur la borne
+    B->>S: GET /api/borne/etat
+    S-->>B: DEVERROUILLEE + duel 1
+    loop chaque duel
+        B->>S: POST /api/borne/choix (bouton appuyé)
+        S-->>B: duel suivant
+    end
+    S->>S: dernier duel : bulletin + lignes de vote, d'un coup
+    S-->>B: TERMINE
+    T->>S: statut ? (toutes les 2 s)
+    S-->>T: voted_booth : « Merci, votre vote est enregistré »
 ```
 
-Le poste isoloir n'apprend jamais qui a scanné : seul le téléphone du votant reçoit la réponse.
+L'écran de l'isoloir n'apprend jamais qui a scanné, et la borne non plus : elle ne reçoit qu'un numéro de vote.
 Chaque scan, réussi ou refusé, est tracé dans `journal_checkin` (audit uniquement).
 
 ## 7. Attaque par attaque
@@ -182,27 +238,24 @@ Chaque scan, réussi ou refusé, est tracé dans `journal_checkin` (audit unique
 | Modifier un vrai QR (autre isoloir, autre heure) | La signature ne correspond plus : `invalid_token`. | ✅ Protégé |
 | Réutiliser une photo du QR prise plus tôt | Au-delà de 5 à 10 s : `expired_token`. | ✅ Protégé |
 | Récupérer le QR via l'API depuis chez soi | Pas de clé du poste : `401`. | ✅ Protégé |
-| Commencer en ligne, puis scanner à l'isoloir | Bulletin en ligne existant : `already_voted`. | ✅ Protégé |
+| Commencer en ligne, puis scanner à l'isoloir | Bulletin existant : `already_voted`. | ✅ Protégé |
 | Scanner, puis voter en ligne via l'API | `voter()` refuse en 409, même sans passer par « Commencer ». | ✅ Protégé |
 | Scan et vote en ligne à la même milliseconde | Même verrou : un seul des deux passe. | ✅ Protégé |
 | Scanner dans deux isoloirs | Un seul émargement : le deuxième est refusé. | ✅ Protégé |
-| Envoyer une photo du QR en direct à un complice | Il peut scanner dans les ~7 s. Limite acceptée par la spec. | ⚪ Accepté |
-| Écouter le Wi-Fi | Chiffré en dev ; en prod, HTTPS pas encore en place. | 🟠 Partiel |
-| Lire la clé sur le poste isoloir | Possible avec un clavier et F12 : dépend de l'installation. | 🟠 Installation |
+| Voter une deuxième fois sur la borne | Le bulletin existe : `already_voted`. | ✅ Protégé |
+| Deux votants qui scannent la même borne en même temps | Verrou sur l'isoloir : l'un passe, l'autre reçoit `booth_busy`. | ✅ Protégé |
+| Abandonner en plein vote pour faire compter ses premiers duels | Seuls les bulletins complets comptent. | ✅ Protégé |
+| Voter sur la borne sans scanner | La borne reste verrouillée tant que le serveur n'a pas ouvert de vote. | ✅ Protégé |
+| Se faire passer pour une borne (PC qui imite l'ESP32) | Sans la clé de la borne : `401`. | 🟠 À vérifier dans les routes `/api/borne` |
+| Écouter le Wi-Fi pour voler la clé d'une borne | La borne parle en HTTP : la clé passe en clair. | 🟠 Réseau dédié |
+| Relayer le QR en direct à un complice | Le complice ouvre son vote sur la borne où se trouve le relayeur. | 🟠 Organisation (voir §8) |
+| Écouter le Wi-Fi (téléphones) | Chiffré en dev ; en prod, HTTPS pas encore en place. | 🟠 Partiel |
+| Lire la clé sur l'écran de l'isoloir | Possible avec un clavier et F12 : dépend de l'installation. | 🟠 Installation |
 | Deviner le mot de passe d'un étudiant | Aucune limite d'essais sur la connexion. | 🔴 Ouvert |
-| Voter en ligne, puis voter sur papier *sans* scanner | Rien dans le code ne peut l'empêcher : l'urne est physique. | 🔴 Ouvert |
 
 ## 8. Failles restantes
 
 De la plus grave à la moins grave.
-
-### 🔴 Critique (organisation) : le QR ne peut pas empêcher de voter sur papier sans scanner
-Le système verrouille l'appli, mais **rien n'oblige à scanner avant de glisser un bulletin dans l'urne**. Un votant qui
-a voté en ligne peut entrer dans l'isoloir, ignorer l'écran, voter sur papier et repartir. Aucun code ne peut l'empêcher.
-
-**Correction, à décider en équipe** : au dépôt du bulletin, un assesseur vérifie sur le téléphone l'écran
-« Identification réussie », rechargé devant lui pour éviter une capture d'écran. Autre option : garder une feuille
-d'émargement papier à l'urne en plus du QR.
 
 ### 🔴 Critique : pas de limite d'essais à la connexion
 Rien n'empêche d'essayer des milliers de mots de passe sur `/api/auth/login`. Deviner le mot de passe d'un étudiant
@@ -220,29 +273,57 @@ permet de **voter à sa place** : le JWT sera alors authentique, et toutes les p
 **Correction** : nginx en HTTPS avec un vrai certificat (Let's Encrypt), proxy `/api` vers le back, CORS réglé sur la
 vraie adresse ; dans docker-compose, n'exposer que le front et passer les secrets par un `.env`.
 
+### 🟠 Important : les routes de la borne ne sont pas encore écrites
+Toute la sécurité côté borne ([§5.7](#57-la-borne-obéit-et-prouve-qui-elle-est)) dépend des routes `/api/borne/etat` et
+`/api/borne/choix`, confiées à l'autre équipe. À vérifier à leur arrivée :
+- la clé est obligatoire, et comparée par son empreinte avec `MessageDigest.isEqual` ;
+- un vote n'est accepté que s'il appartient à **l'isoloir de la clé** ;
+- le dernier duel prend le **même verrou** que le check-in (`findPeriodeOuverteForUpdate`) ;
+- un choix renvoyé deux fois n'est pas compté deux fois ;
+- l'heure du dernier appel est écrite avec le `Clock` du back (UTC), sinon la borne paraîtra hors ligne.
+
+### 🟠 Important (organisation) : relais du QR = vote pour quelqu'un d'autre
+Quelqu'un dans l'isoloir filme le QR et l'envoie en direct à un ami, qui le scanne avec **son** téléphone dans les ~7 s.
+Le vote de l'ami s'ouvre alors sur la borne où se trouve le relayeur, qui peut voter à sa place, puis rescanner pour
+lui-même. C'est un **vote par procuration**, avec l'accord de l'ami (il faut son téléphone connecté à son compte).
+
+Avec le papier, le relais ne rapportait rien. Avec la borne, il rapporte une voix par ami complice. La rotation ne peut
+pas l'empêcher, et c'est équivalent à prêter son téléphone.
+
+**Correction, à décider en équipe** : un assesseur voit entrer et sortir chaque votant, et un seul vote par passage
+dans l'isoloir. Le journal (`journal_checkin`) permet de repérer après coup plusieurs votes à la suite sur la même borne.
+
+### 🟠 Important (réseau) : la borne parle en HTTP
+L'ESP32 envoie sa clé en clair : quelqu'un qui écoute le Wi-Fi peut la lire, puis se faire passer pour la borne.
+
+**Correction** : un **réseau local dédié** à l'événement, protégé par mot de passe, où ne sont connectés que le serveur,
+les écrans et les bornes. Plus tard si besoin : HTTPS sur l'ESP32.
+
 ### 🟠 Important (déploiement) : les clés de démo sont publiques
-Les clés de test (`cle-test-isoloir`, `tablette-isoloir-1-demo`) et le compte `root@demo.fr` / `root` du profil `demo`
-sont sur GitHub.
+Les clés de test (`cle-test-isoloir`, `cle-test-borne`, `tablette-isoloir-1-demo`) et le compte `root@demo.fr` / `root`
+du profil `demo` sont sur GitHub.
 
-**Correction** : ne jamais les utiliser en prod. Une clé aléatoire par isoloir (`openssl rand -hex 24`), et **jamais**
-le profil `demo` sur la base de prod. Voir le [README à la racine](../README.md).
+**Correction** : ne jamais les utiliser en prod. Deux clés aléatoires par isoloir, une pour l'écran et une pour la borne
+(`openssl rand -hex 24`), et **jamais** le profil `demo` sur la base de prod. Voir le [README à la racine](../README.md).
 
-### 🟠 À discuter : le vote en ligne n'est pas secret dans la base
-Chaque choix de duel (`ligne_vote`) remonte à l'électeur par `bulletin → inscription → utilisateur`. Quiconque lit la
-base sait qui a voté quoi. C'est l'inverse de l'isoloir papier, où le lien n'existe pas.
+### 🟠 À décider : un vote jamais terminé bloque la borne
+Si un votant quitte l'isoloir en plein vote, ou si la borne tombe en panne, son vote reste ouvert : la borne reste
+occupée pour les suivants, et le votant ne peut plus voter ailleurs. Rien n'est compté à tort (voir [§5.8](#58-un-vote-incomplet-ne-compte-jamais)),
+mais c'est un blocage.
+
+**Correction, à décider** : une procédure avec un assesseur, ou une expiration automatique qui efface les choix
+provisoires et libère la borne.
+
+### 🟠 À discuter : le vote n'est pas secret dans la base
+Chaque choix de duel (`ligne_vote`) remonte à l'électeur par `bulletin → inscription → utilisateur`, en ligne comme sur
+la borne. Quiconque lit la base sait qui a voté quoi.
 
 **Piste** : enregistrer « a voté » séparément et stocker les bulletins sans lien avec l'identité. C'est un gros
-changement de conception, qui obligerait à voter tous les duels en une seule fois.
+changement de conception.
 
-### 🟠 À aligner : la borne ESP32 et l'isoloir papier
-La borne de Léo (`borne/`) est un isoloir *électronique* : on scanne un QR, puis on vote avec des boutons. Ses routes ne
-sont pas encore dans le back. Si elle coexiste avec l'isoloir papier, elle devra passer par **le même verrou** et les
-mêmes vérifications, sinon on retrouve un double vote possible.
-
-### ⚪ Accepté : relais en temps réel
-Dans l'isoloir, quelqu'un filme le QR en direct pour un complice qui scanne dans les ~7 s. La rotation ne peut pas
-l'empêcher. Conséquence : le complice perd lui-même son vote en ligne, sans être dans l'isoloir pour voter sur papier.
-Le relais ne rapporte donc pas de voix en plus. La spec l'accepte (§5).
+### ⚪ Organisation : le bulletin papier de secours
+En cas de panne, le vote repasse sur papier. Le QR ne contrôle alors plus rien : il faut une **feuille d'émargement
+papier**, et vérifier dans l'appli (ou `journal_checkin`) que la personne n'a pas déjà voté.
 
 ### ⚪ Faible : pas de limite de requêtes sur le check-in
 Rien n'empêche d'envoyer des milliers de scans par seconde. Ça ne permet pas de deviner un QR, mais ça peut remplir
@@ -257,19 +338,28 @@ jamais ces valeurs dans un message ou sur GitHub.
 - ~~N'importe qui pouvait se faire passer pour un autre votant~~ : l'en-tête `X-User-Id` du prototype est remplacé par le JWT.
 - ~~Voter en ligne après s'être identifié à l'isoloir~~ : `ElectionService.voter()` prend le verrou et refuse en 409 ;
   « Commencer » bloque aussi l'isoloir dans l'autre sens.
+- ~~Voter sur papier sans scanner~~ : l'isoloir vote maintenant sur la borne, qui reste verrouillée sans scan.
+- ~~Un vote en ligne abandonné comptait dans le classement~~ : seuls les bulletins complets comptent.
+- ~~Le QR fixe du premier projet de borne~~ : remplacé par le QR tournant du check-in.
 
 ## 9. Avant le jour J
 
 - [x] Le JWT remplace `X-User-Id`.
 - [x] Le vote en ligne est refusé après un check-in, et inversement.
 - [x] Tables du check-in créées sur la base de prod.
-- [ ] L'équipe a décidé comment l'urne vérifie le check-in (assesseur ou émargement papier).
+- [x] Seuls les bulletins complets comptent dans les résultats.
+- [x] Le scan ouvre le vote sur la borne (en ligne et libre), testé avec un faux bulletin SQL.
+- [ ] Colonnes de la borne créées sur la base de prod (étape 1b de `sql/guide-neon.sql`).
+- [ ] Routes `/api/borne` écrites et relues (autre équipe), firmware à jour (Léo), test de bout en bout avec la vraie borne.
+- [ ] Décision sur les votes jamais terminés (assesseur ou expiration).
 - [ ] Limite d'essais à la connexion.
 - [ ] nginx en HTTPS avec un vrai certificat, proxy `/api`, CORS réglé.
 - [ ] docker-compose : seul le front exposé, secrets dans un `.env`.
-- [ ] Vrais isoloirs créés le jour de l'installation, une clé aléatoire par poste ([README à la racine](../README.md)).
+- [ ] Réseau Wi-Fi dédié, protégé par mot de passe, en 2,4 GHz (l'ESP32 ne voit pas le 5 GHz).
+- [ ] Vrais isoloirs créés le jour de l'installation, deux clés aléatoires par isoloir ([README à la racine](../README.md)).
 - [ ] Postes isoloirs installés selon la [checklist](README.md#installation-dun-poste-isoloir) (pas de clavier, mode kiosque, serveur ailleurs).
-- [ ] Décision avec l'équipe de Léo sur la borne ESP32.
+- [ ] Un assesseur voit entrer et sortir chaque votant (relais du QR).
+- [ ] Période à 3 candidats (la borne a 3 paires de LED).
 - [ ] Accès à Neon limité à 1 ou 2 personnes ; profil `demo` jamais lancé sur la prod.
 
 ## 10. Quiz
@@ -286,6 +376,35 @@ serveur, qui a la clé, peut en produire une valide.
 
 Parce que le téléphone peut mentir : n'importe qui peut modifier une requête. Le serveur ne croit que le JWT, qu'il a
 lui-même signé à la connexion. C'est exactement le problème qu'avait `X-User-Id` dans le prototype.
+</details>
+
+<details>
+<summary>Pourquoi un QR qui change toutes les 5 s plutôt qu'un autocollant collé sur la borne ?</summary>
+
+Un autocollant ne change jamais : une photo suffit pour déverrouiller la borne depuis chez soi, et la personne qui est
+dans l'isoloir vote alors à la place du compte distant. Le QR tournant expire en 5 à 10 s.
+</details>
+
+<details>
+<summary>Pourquoi la borne n'envoie-t-elle pas son numéro dans ses requêtes ?</summary>
+
+Parce qu'elle pourrait mentir, comme le téléphone. Le serveur retrouve l'isoloir à partir de la **clé** de la borne :
+une borne ne peut donc agir que sur son propre isoloir. Mettre le numéro dans l'URL ou dans le body ne changerait rien,
+seule la clé prouve qui parle.
+</details>
+
+<details>
+<summary>Un votant abandonne après 2 duels sur 3. Ses 2 choix comptent-ils ?</summary>
+
+Non. Sur la borne, ils restent provisoires et ne deviennent jamais un bulletin. Et de toute façon, les résultats ne
+lisent que les bulletins complets.
+</details>
+
+<details>
+<summary>Deux votants scannent le même isoloir à la même milliseconde. Que se passe-t-il ?</summary>
+
+Le serveur verrouille la ligne de l'isoloir : les deux scans passent l'un après l'autre. Le premier ouvre le vote, le
+second reçoit `booth_busy` (« borne occupée ») et rien n'est écrit pour lui.
 </details>
 
 <details>
@@ -309,13 +428,6 @@ le serveur peut refuser. C'était le trou corrigé dans `ElectionService.voter()
 </details>
 
 <details>
-<summary>Pourquoi les trois actions (scan, « Commencer », vote) prennent-elles le même verrou ?</summary>
-
-Pour qu'elles passent l'une après l'autre. Sans verrou, un scan et un vote envoyés à la même milliseconde liraient tous
-les deux « rien n'est choisi » et passeraient tous les deux.
-</details>
-
-<details>
 <summary>Quelle est la faille la plus grave aujourd'hui côté code ?</summary>
 
 L'absence de limite d'essais à la connexion : deviner un mot de passe donne un vrai JWT, et le système ne peut alors plus
@@ -331,4 +443,4 @@ Parce que toutes les protections reposent sur eux. Avec l'accès à la base, on 
 
 ---
 
-*État du code : branche `qr-code`, après la fusion de `main` (commit `b69310c`).*
+*État du code : branche `qr-code`, check-in branché sur la borne (commits `b5d151f` et `76e3755`). Routes `/api/borne` et firmware pas encore livrés.*

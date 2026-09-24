@@ -12,7 +12,7 @@ import ConfirmationVoteEnLigne from "./ConfirmationVoteEnLigne";
 function PageVoteEnLigne() {
   const { statut, erreur, setStatut } = useStatutVotant();
 
-  if (statut === "checked_in_isoloir" || statut === "not_registered") {
+  if (statut === "checked_in_isoloir" || statut === "voted_booth" || statut === "not_registered") {
     return <Navigate to="/vote" replace />;
   }
   if (statut === "voted_app") {
