@@ -77,7 +77,8 @@ public class ScrutinAdminService {
 		}
 		PeriodeDto periodeDto = electionService.versDto(periode);
 
-		List<LigneVote> lignes = ligneVoteRepository.findByPeriode(periode.getIdPeriode());
+		List<LigneVote> lignes = ligneVoteRepository.findCompletesByPeriode(periode.getIdPeriode(),
+				periodeDto.nbDuels());
 		long nbCommences = bulletinRepository.compterDuelsParInscription(periode.getIdPeriode()).size();
 
 		// Détail de chaque duel : victoires de chaque côté et égalités
