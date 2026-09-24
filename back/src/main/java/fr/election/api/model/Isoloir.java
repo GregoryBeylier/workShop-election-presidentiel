@@ -1,5 +1,7 @@
 package fr.election.api.model;
 
+import java.time.LocalDateTime;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -31,6 +33,14 @@ public class Isoloir {
 	@Column(name = "cle_tablette_hash", nullable = false, length = 64)
 	private String cleTabletteHash;
 
+	// SHA-256 (hex) de la clé de la borne (ESP32) de cet isoloir. null = isoloir sans borne
+	@Column(name = "cle_borne_hash", length = 64)
+	private String cleBorneHash;
+
+	// Dernier appel de la borne (GET /api/borne/etat ou POST /api/borne/choix), en UTC
+	@Column(name = "derniere_activite_borne")
+	private LocalDateTime derniereActiviteBorne;
+
 	public Integer getIdIsoloir() { return idIsoloir; }
 	public String getLibelle() { return libelle; }
 	public void setLibelle(String libelle) { this.libelle = libelle; }
@@ -40,5 +50,10 @@ public class Isoloir {
 	public void setCleHmac(String cleHmac) { this.cleHmac = cleHmac; }
 	public String getCleTabletteHash() { return cleTabletteHash; }
 	public void setCleTabletteHash(String cleTabletteHash) { this.cleTabletteHash = cleTabletteHash; }
+	public String getCleBorneHash() { return cleBorneHash; }
+	public void setCleBorneHash(String cleBorneHash) { this.cleBorneHash = cleBorneHash; }
+	public LocalDateTime getDerniereActiviteBorne() { return derniereActiviteBorne; }
+	public void setDerniereActiviteBorne(LocalDateTime derniereActiviteBorne) { this.derniereActiviteBorne = derniereActiviteBorne; }
+	public boolean aUneBorne() { return cleBorneHash != null; }
 
 }
