@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Info } from "lucide-react";
 import {
+  envoyerLogoCandidat,
   envoyerPhotoCandidat,
   retirerCandidat,
+  supprimerLogoCandidat,
   supprimerPhotoCandidat,
   type CandidatAdmin,
 } from "../../../api/admin";
@@ -12,7 +14,7 @@ import ListeCandidats from "./ListeCandidats";
 import Alerte, { type Message } from "../../../components/ui/Alerte";
 
 /**
- * Onglet "Candidats" : liste des candidats du scrutin, photos modifiables,
+ * Onglet "Candidats" : liste des candidats du scrutin, photos et logos modifiables,
  * retrait possible pendant la préparation. L'inscription se fait dans l'onglet "Inscriptions".
  */
 function OngletCandidats({
@@ -59,6 +61,24 @@ function OngletCandidats({
     onChange();
   };
 
+  const changerLogo = async ({ candidat }: CandidatAdmin, logo: Blob) => {
+    await envoyerLogoCandidat(candidat.id, logo);
+    setMessage({
+      type: "succes",
+      texte: `Logo de ${candidat.prenom} ${candidat.nom} enregistré.`,
+    });
+    onChange();
+  };
+
+  const supprimerLogo = async ({ candidat }: CandidatAdmin) => {
+    await supprimerLogoCandidat(candidat.id);
+    setMessage({
+      type: "succes",
+      texte: `Logo de ${candidat.prenom} ${candidat.nom} retiré.`,
+    });
+    onChange();
+  };
+
   return (
     <div className="flex flex-col gap-6">
       {!modifiable && (
@@ -77,6 +97,8 @@ function OngletCandidats({
           onRetirer={retirer}
           onPhoto={changerPhoto}
           onSupprimerPhoto={supprimerPhoto}
+          onLogo={changerLogo}
+          onSupprimerLogo={supprimerLogo}
           onErreur={(texte) => setMessage({ type: "erreur", texte })}
         />
       </Panneau>
