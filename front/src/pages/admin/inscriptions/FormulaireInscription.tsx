@@ -1,15 +1,27 @@
-import { useState, type SubmitEvent } from "react";
+import { useEffect, useMemo, useState, type SubmitEvent } from "react";
 import { UserPlus } from "lucide-react";
-import { ajouterCandidat, creerUtilisateur } from "../../../api/admin";
+import {
+  ajouterCandidat,
+  creerUtilisateur,
+  envoyerPhotoCandidat,
+} from "../../../api/admin";
 import type { EtatScrutin } from "../../../api/election";
+import DepotPhoto from "../../../components/ui/DepotPhoto";
 import Champ from "../../../components/ui/Champ";
+import { initiales } from "../../../utils/format";
 import ChampMotDePasse from "../../../components/ui/ChampMotDePasse";
 import type { IdentifiantsProvisoires } from "./Identifiants";
 import ChoixRole, { type Role } from "./ChoixRole";
 import Bouton from "../../../components/ui/Bouton";
 import Alerte from "../../../components/ui/Alerte";
 
-const vide = { email: "", motDePasse: "", prenom: "", nom: "", parti: "" };
+const vide = {
+  email: "",
+  motDePasse: "",
+  prenom: "",
+  nom: "",
+  parti: "",
+};
 
 /**
  * Formulaire unique d'inscription : l'admin choisit si la personne est simple
@@ -32,6 +44,18 @@ function FormulaireInscription({
   const [form, setForm] = useState(vide);
   const [erreur, setErreur] = useState<string | null>(null);
   const [enCours, setEnCours] = useState(false);
+  // Photo choisie avant la création : envoyée une fois le candidat créé (il faut son id)
+  const [photo, setPhoto] = useState<Blob | null>(null);
+  const apercu = useMemo(
+    () => (photo ? URL.createObjectURL(photo) : null),
+    [photo],
+  );
+  useEffect(
+    () => () => {
+      if (apercu) URL.revokeObjectURL(apercu);
+    },
+    [apercu],
+  );
 
   // Les candidats ne peuvent être ajoutés qu'avant l'ouverture du vote
   const candidatPossible = etat === "PREPARATION";
@@ -54,17 +78,28 @@ function FormulaireInscription({
       if (estCandidat) {
         const { element, compteCree } = await ajouterCandidat(form);
         const nom = `${element.candidat.prenom} ${element.candidat.nom}`;
+        // Le candidat est créé : un échec de la photo ne doit pas l'annuler
+        const photoRatee =
+          photo &&
+          (await envoyerPhotoCandidat(element.candidat.id, photo).then(
+            () => false,
+            () => true,
+          ));
         onInscrit(
           compteCree ? identifiants : null,
-          compteCree
+          (compteCree
             ? `${nom} est inscrit comme candidat.`
-            : `${nom} est maintenant candidat. Son compte existait déjà : son mot de passe ne change pas.`,
+            : `${nom} est maintenant candidat. Son compte existait déjà : son mot de passe ne change pas.`) +
+            (photoRatee
+              ? " La photo n'a pas pu être enregistrée : ajoutez-la depuis l'onglet Candidats."
+              : ""),
         );
       } else {
         await creerUtilisateur({ email, motDePasse: form.motDePasse });
         onInscrit(identifiants, `${email} est inscrit comme électeur.`);
       }
       setForm(vide);
+      setPhoto(null);
     } catch (err) {
       setErreur((err as Error).message);
     } finally {
@@ -107,6 +142,30 @@ function FormulaireInscription({
               aide="Affiché sous le nom du candidat sur la page de vote et dans les résultats."
               {...champ("parti")}
             />
+          </div>
+          <div className="sm:col-span-2">
+            <DepotPhoto
+              texte={initiales(form.prenom, form.nom)}
+              photo={apercu}
+              libelle="photo du candidat"
+              className="h-16 w-16 bg-gradient-to-br from-brand-teal/15 to-brand-dark/10 font-heading font-bold text-brand-dark"
+              onPhoto={setPhoto}
+              onSupprimer={() => setPhoto(null)}
+              onErreur={setErreur}
+            >
+              <div className="min-w-0 text-sm">
+                <p className="font-medium text-brand-dark">
+                  Photo{" "}
+                  <span className="font-normal text-gray-500">
+                    (facultatif)
+                  </span>
+                </p>
+                <p className="text-xs leading-5 text-gray-500">
+                  Glissez une image ici ou cliquez sur le rond. JPEG, PNG ou
+                  WebP ; sans photo, les initiales sont affichées.
+                </p>
+              </div>
+            </DepotPhoto>
           </div>
         </div>
       )}

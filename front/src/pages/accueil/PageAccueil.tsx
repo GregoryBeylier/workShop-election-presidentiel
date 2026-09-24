@@ -7,7 +7,7 @@ import {
   type Periode,
 } from "../../api/election";
 import Bandeau from "../../components/ui/Bandeau";
-import { dateCloture, formatJour } from "../../utils/format";
+import { dateCloture, formatJourHeure } from "../../utils/format";
 import CarteProgression from "./CarteProgression";
 import CommentCaMarche from "./CommentCaMarche";
 import UniversMDS from "./UniversMDS";
@@ -32,7 +32,7 @@ function PageAccueil() {
   const duelsFaits = monVote?.duels.filter((d) => d.fait).length ?? 0;
   const duelsTotal = monVote?.duels.length ?? periode?.nbDuels ?? 0;
   const cloture = periode && dateCloture(periode);
-  const dateClotureTexte = cloture ? formatJour(cloture) : "à définir";
+  const dateClotureTexte = cloture ? formatJourHeure(cloture) : "à définir";
   const etat = periode?.etat ?? "OUVERT";
 
   const etiquette =

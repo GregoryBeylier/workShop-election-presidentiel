@@ -57,7 +57,7 @@ export interface NouveauCandidat extends NouvelUtilisateur {
 
 export const getStats = () => apiFetch<Stats>("/admin/stats");
 
-/** closLe : "YYYY-MM-DD", date de clôture prévue affichée aux électeurs. */
+/** closLe : "YYYY-MM-DDTHH:mm", date et heure de clôture prévue affichée aux électeurs. */
 export const ouvrirScrutin = (closLe: string) =>
   apiFetch<Periode>("/admin/scrutin/ouvrir", {
     method: "POST",
@@ -103,6 +103,21 @@ export const ajouterCandidat = (candidat: NouveauCandidat) =>
   apiFetch<Creation<CandidatAdmin>>("/admin/candidats", {
     method: "POST",
     body: candidat,
+  });
+
+/** Remplace la photo du candidat (image déjà redimensionnée, voir preparerPhoto). */
+export const envoyerPhotoCandidat = (idCandidat: number, photo: Blob) => {
+  const donnees = new FormData();
+  donnees.append("photo", photo, "photo.jpg");
+  return apiFetch<Candidat>(`/admin/candidats/${idCandidat}/photo`, {
+    method: "PUT",
+    body: donnees,
+  });
+};
+
+export const supprimerPhotoCandidat = (idCandidat: number) =>
+  apiFetch<Candidat>(`/admin/candidats/${idCandidat}/photo`, {
+    method: "DELETE",
   });
 
 export const retirerCandidat = (idCandidat: number) =>

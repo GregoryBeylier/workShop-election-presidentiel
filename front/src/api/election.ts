@@ -5,6 +5,7 @@ export interface Candidat {
   prenom: string;
   nom: string;
   parti: string;
+  photo: string | null; // URL servie par le back, null : on affiche les initiales
 }
 
 export type EtatScrutin = "PREPARATION" | "OUVERT" | "CLOS";
@@ -14,7 +15,7 @@ export interface Periode {
   etat: EtatScrutin;
   ouverte: boolean;
   ouvertLe: string | null; // "YYYY-MM-DD"
-  closLe: string | null; // clôture prévue si OUVERT, effective si CLOS
+  closLe: string | null; // "YYYY-MM-DDTHH:mm:ss", clôture prévue si OUVERT, effective si CLOS
   nbDuels: number;
   nbInscrits: number;
   nbVotants: number; // électeurs ayant voté tous les duels

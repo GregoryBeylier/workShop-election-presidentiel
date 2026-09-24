@@ -4,7 +4,7 @@ import { genererMotDePasse } from "../../utils/motDePasse";
 
 /**
  * Mot de passe provisoire saisi par l'admin, avec affichage en clair
- * et bouton « Générer » (mot de passe lisible, facile à transmettre).
+ * et bouton « Générer » (code à 4 chiffres, facile à transmettre).
  */
 function ChampMotDePasse({
   id,

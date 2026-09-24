@@ -1,9 +1,9 @@
 package fr.election.api.admin.dto;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import jakarta.validation.constraints.NotNull;
 
-// Date de clôture prévue, affichée aux électeurs (compte à rebours)
-public record OuvrirRequest(@NotNull LocalDate closLe) {
+// Date et heure de clôture prévues, affichée aux électeurs (compte à rebours)
+public record OuvrirRequest(@NotNull LocalDateTime closLe) {
 }

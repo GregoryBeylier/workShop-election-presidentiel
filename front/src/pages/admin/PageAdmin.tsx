@@ -13,7 +13,12 @@ import OngletCandidats from "./candidats/OngletCandidats";
 type IdOnglet = "tableau" | "inscriptions" | "candidats";
 
 const onglets: Onglet<IdOnglet>[] = [
-  { id: "tableau", label: "Tableau de bord", icon: LayoutDashboard },
+  {
+    id: "tableau",
+    label: "Tableau de bord",
+    labelCourt: "Suivi",
+    icon: LayoutDashboard,
+  },
   { id: "inscriptions", label: "Inscriptions", icon: Users },
   { id: "candidats", label: "Candidats", icon: UserRoundCheck },
 ];

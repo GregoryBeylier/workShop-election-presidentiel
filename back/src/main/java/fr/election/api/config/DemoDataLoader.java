@@ -69,7 +69,7 @@ public class DemoDataLoader implements CommandLineRunner {
 		PeriodeVote periode = new PeriodeVote();
 		periode.setStatut(true);
 		periode.setOuvertLe(LocalDate.now());
-		periode.setClosLe(LocalDate.now().plusDays(14));
+		periode.setClosLe(LocalDate.now().plusDays(14).atTime(23, 59));
 		periodeRepository.save(periode);
 
 		String[][] candidatsDemo = {

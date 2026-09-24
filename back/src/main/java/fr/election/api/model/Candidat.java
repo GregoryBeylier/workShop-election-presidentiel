@@ -39,6 +39,10 @@ public class Candidat {
 	@Column(name = "parti", nullable = false, length = 100)
 	private String parti = "";
 
+	// URL publique de la photo (table candidat_photo), null : pas de photo, le front affiche les initiales
+	@Column(name = "photo", length = 500)
+	private String photo;
+
 	@Column(name = "inscrit_le", nullable = false)
 	private LocalDate inscritLe = LocalDate.now();
 
@@ -53,6 +57,8 @@ public class Candidat {
 	public void setPrenom(String prenom) { this.prenom = prenom; }
 	public String getParti() { return parti; }
 	public void setParti(String parti) { this.parti = parti; }
+	public String getPhoto() { return photo; }
+	public void setPhoto(String photo) { this.photo = photo; }
 	public LocalDate getInscritLe() { return inscritLe; }
 
 }

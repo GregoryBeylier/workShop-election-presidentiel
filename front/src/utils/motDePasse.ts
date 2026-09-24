@@ -11,19 +11,11 @@ export function reglesMotDePasse(motDePasse: string) {
   return { ...regles, valide: Object.values(regles).every(Boolean) };
 }
 
-// Sans caractères ambigus (0/O, 1/l/I) pour pouvoir le dicter ou le recopier
-const LETTRES = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz";
-const CHIFFRES = "23456789";
-
-function tirer(alphabet: string, n: number): string {
-  const valeurs = crypto.getRandomValues(new Uint32Array(n));
-  return Array.from(valeurs, (v) => alphabet[v % alphabet.length]).join("");
-}
-
 /**
- * Mot de passe provisoire lisible, du type "Kmtq-7384-Ravp" (majuscule,
- * chiffres et tirets : il respecte aussi les règles du mot de passe définitif).
+ * Mot de passe provisoire : code à 4 chiffres, du type "0473", facile à dicter
+ * ou à recopier (valable une seule connexion, il doit ensuite être remplacé).
  */
 export function genererMotDePasse(): string {
-  return `${tirer(LETTRES, 1).toUpperCase()}${tirer(LETTRES, 3)}-${tirer(CHIFFRES, 4)}-${tirer(LETTRES, 4)}`;
+  const [valeur] = crypto.getRandomValues(new Uint32Array(1));
+  return String(valeur % 10000).padStart(4, "0");
 }

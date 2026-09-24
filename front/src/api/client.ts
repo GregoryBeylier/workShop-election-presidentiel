@@ -11,7 +11,8 @@ export class ApiError extends Error {
 }
 
 /**
- * fetch vers le back avec le JWT en en-tête et le corps JSON.
+ * fetch vers le back avec le JWT en en-tête et le corps JSON
+ * (ou multipart si `body` est un FormData : envoi de fichier).
  * Un 401 (token refusé) vide la session et renvoie sur /login.
  */
 export async function apiFetch<T>(
@@ -19,18 +20,23 @@ export async function apiFetch<T>(
   options: { method?: string; body?: unknown } = {},
 ): Promise<T> {
   const token = getValidToken();
+  const multipart = options.body instanceof FormData;
   let res: Response;
   try {
     res = await fetch(`/api${path}`, {
       method: options.method ?? "GET",
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(options.body !== undefined
+        // En multipart, le navigateur fixe lui-même le Content-Type (avec la frontière)
+        ...(options.body !== undefined && !multipart
           ? { "Content-Type": "application/json" }
           : {}),
       },
-      body:
-        options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      body: multipart
+        ? (options.body as FormData)
+        : options.body !== undefined
+          ? JSON.stringify(options.body)
+          : undefined,
     });
   } catch {
     throw new ApiError(0, "Impossible de joindre le serveur");

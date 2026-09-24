@@ -36,7 +36,7 @@ public class SecurityConfig {
 	@Value("${app.jwt.secret}")
 	private String jwtSecret;
 
-	// Seules la santé et la connexion sont publiques. Avec un mot de passe provisoire (SCOPE_CHANGEMENT_MDP),
+	// Seules la santé, la connexion et les photos des candidats (balises <img>, sans JWT) sont publiques. Avec un mot de passe provisoire (SCOPE_CHANGEMENT_MDP),
 	// on ne peut que le changer ; /api/admin/** exige le rôle ADMIN (claim scope du JWT => autorité SCOPE_ADMIN) ;
 	// tout le reste exige un électeur ou un admin
 	@Bean
@@ -48,6 +48,7 @@ public class SecurityConfig {
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 				.requestMatchers("/api/health", "/api/auth/login", "/error").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/candidats/*/photo").permitAll()
 				// Poste isoloir : pas de JWT, il présente sa clé (X-Isoloir-Cle), vérifiée par IsoloirService
 				.requestMatchers(HttpMethod.GET, "/api/booths/*/current-qr").permitAll()
 				.requestMatchers("/api/auth/changer-mot-de-passe").authenticated()

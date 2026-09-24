@@ -47,6 +47,7 @@ function ClassementAutres({
                   <div className="h-14 w-14 overflow-hidden rounded-full border-4 border-[#2EC7D3] bg-gray-200 sm:h-20 sm:w-20">
                     <Avatar
                       texte={initiales(candidat.prenom, candidat.nom)}
+                      photo={candidat.photo}
                       className="h-full w-full text-base font-black text-[#3C3C3B] sm:text-2xl"
                     />
                   </div>
