@@ -2,7 +2,6 @@
 <<<<<<< Updated upstream
 import { Trophy } from "lucide-react";
 =======
-import React from "react";
 import { Trophy, Clock } from "lucide-react";
 
 // Statut du scrutin, renvoyé par le back plus tard (ex: GET /scrutin/statut).
