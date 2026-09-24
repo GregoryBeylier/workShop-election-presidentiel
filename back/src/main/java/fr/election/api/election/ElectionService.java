@@ -28,6 +28,7 @@ import fr.election.api.model.PeriodeVote;
 import fr.election.api.repository.AffrontementRepository;
 import fr.election.api.repository.BulletinRepository;
 import fr.election.api.repository.CandidatRepository;
+import fr.election.api.repository.EmargementIsoloirRepository;
 import fr.election.api.repository.InscriptionRepository;
 import fr.election.api.repository.LigneVoteRepository;
 import fr.election.api.repository.PeriodeVoteRepository;
@@ -44,16 +45,19 @@ public class ElectionService {
 	private final InscriptionRepository inscriptionRepository;
 	private final BulletinRepository bulletinRepository;
 	private final LigneVoteRepository ligneVoteRepository;
+	private final EmargementIsoloirRepository emargementIsoloirRepository;
 
 	public ElectionService(PeriodeVoteRepository periodeRepository, CandidatRepository candidatRepository,
 			AffrontementRepository affrontementRepository, InscriptionRepository inscriptionRepository,
-			BulletinRepository bulletinRepository, LigneVoteRepository ligneVoteRepository) {
+			BulletinRepository bulletinRepository, LigneVoteRepository ligneVoteRepository,
+			EmargementIsoloirRepository emargementIsoloirRepository) {
 		this.periodeRepository = periodeRepository;
 		this.candidatRepository = candidatRepository;
 		this.affrontementRepository = affrontementRepository;
 		this.inscriptionRepository = inscriptionRepository;
 		this.bulletinRepository = bulletinRepository;
 		this.ligneVoteRepository = ligneVoteRepository;
+		this.emargementIsoloirRepository = emargementIsoloirRepository;
 	}
 
 	@Transactional(readOnly = true)
@@ -97,10 +101,17 @@ public class ElectionService {
 			throw new ResponseStatusException(HttpStatus.CONFLICT, "Le scrutin est clos");
 		}
 
-		Inscription inscription = inscriptionRepository
-			.findByUtilisateurIdUtilisateurAndPeriodeIdPeriode(idUtilisateur, periode.getIdPeriode())
+		// Verrou sur l'inscription (même verrou que le check-in isoloir) : un vote en ligne et un scan
+		// simultanés passent l'un après l'autre, jamais les deux. La période vient d'être vérifiée ouverte.
+		Inscription inscription = inscriptionRepository.findPeriodeOuverteForUpdate(idUtilisateur)
 			.orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN,
 					"Vous n'êtes pas inscrit à ce scrutin"));
+
+		// Identifié à l'isoloir => il vote sur papier, plus en ligne (même en appelant l'API directement)
+		if (emargementIsoloirRepository.findByInscription_IdInscription(inscription.getIdInscription()).isPresent()) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"Vous êtes identifié dans un isoloir : votez sur le bulletin papier.");
+		}
 
 		Affrontement affrontement = affrontementRepository.findByPeriode(periode.getIdPeriode()).stream()
 			.filter(a -> a.getIdAffrontement().equals(idAffrontement))

@@ -1,6 +1,7 @@
 package fr.election.api.checkin;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -23,25 +24,33 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
+import org.springframework.web.server.ResponseStatusException;
 
 import fr.election.api.auth.JwtService;
 import fr.election.api.checkin.CheckinService.ResultatCheckin;
 import fr.election.api.checkin.CheckinService.ResultatVoteEnLigne;
 import fr.election.api.checkin.CheckinService.StatutVotant;
+import fr.election.api.election.ElectionService;
+import fr.election.api.model.Affrontement;
 import fr.election.api.model.Bulletin;
+import fr.election.api.model.Candidat;
 import fr.election.api.model.Inscription;
 import fr.election.api.model.Isoloir;
 import fr.election.api.model.PeriodeVote;
 import fr.election.api.model.Utilisateur;
+import fr.election.api.repository.AffrontementRepository;
 import fr.election.api.repository.BulletinRepository;
+import fr.election.api.repository.CandidatRepository;
 import fr.election.api.repository.EmargementIsoloirRepository;
 import fr.election.api.repository.InscriptionRepository;
 import fr.election.api.repository.IsoloirRepository;
 import fr.election.api.repository.JournalCheckinRepository;
+import fr.election.api.repository.LigneVoteRepository;
 import fr.election.api.repository.PeriodeVoteRepository;
 import fr.election.api.repository.UtilisateurRepository;
 
@@ -73,10 +82,16 @@ class CheckinTests {
 	@Autowired EmargementIsoloirRepository emargementRepository;
 	@Autowired JournalCheckinRepository journalRepository;
 	@Autowired WebApplicationContext context;
+	@Autowired ElectionService electionService;
+	@Autowired CandidatRepository candidatRepository;
+	@Autowired AffrontementRepository affrontementRepository;
+	@Autowired LigneVoteRepository ligneVoteRepository;
 
 	MockMvc mvc;
 	Utilisateur alice, bob, chloe, david;
 	Isoloir isoloir1, isoloir2;
+	Candidat candidat1, candidat2;
+	Affrontement duel;
 
 	@BeforeEach
 	void setUp() {
@@ -101,13 +116,24 @@ class CheckinTests {
 
 		isoloir1 = isoloir("Isoloir 1", "cle-poste-1");
 		isoloir2 = isoloir("Isoloir 2", "cle-poste-2");
+
+		// Un duel à voter en ligne
+		candidat1 = candidat(inscrire(utilisateur("cand1"), periode));
+		candidat2 = candidat(inscrire(utilisateur("cand2"), periode));
+		duel = new Affrontement();
+		duel.setCandidat1(candidat1);
+		duel.setCandidat2(candidat2);
+		affrontementRepository.save(duel);
 	}
 
 	@AfterEach
 	void nettoyer() {
 		journalRepository.deleteAll();
 		emargementRepository.deleteAll();
+		ligneVoteRepository.deleteAll();
 		bulletinRepository.deleteAll();
+		affrontementRepository.deleteAll();
+		candidatRepository.deleteAll();
 		inscriptionRepository.deleteAll();
 		isoloirRepository.deleteAll();
 		utilisateurRepository.deleteAll();
@@ -127,6 +153,18 @@ class CheckinTests {
 		i.setUtilisateur(utilisateur);
 		i.setPeriode(periode);
 		return inscriptionRepository.save(i);
+	}
+
+	private Candidat candidat(Inscription inscription) {
+		Candidat c = new Candidat();
+		c.setInscription(inscription);
+		c.setPeriode(inscription.getPeriode());
+		c.setNom(inscription.getUtilisateur().getMatricule());
+		return candidatRepository.save(c);
+	}
+
+	private void voterEnLigne(Utilisateur u) {
+		electionService.voter(id(u), duel.getIdAffrontement(), candidat1.getIdCandidat());
 	}
 
 	private Isoloir isoloir(String libelle, String cleTablette) {
@@ -353,6 +391,65 @@ class CheckinTests {
 			.andExpect(jsonPath("$.status").value("success"));
 		mvc.perform(get("/api/voter/me/status").header("Authorization", bearer(alice)))
 			.andExpect(jsonPath("$.status").value("voted_app"));
+	}
+
+	@Test
+	void voteEnLigneRefuseApresCheckin() {
+		checkinService.checkin(id(alice), qr(isoloir1));
+
+		// Même en appelant directement l'API de vote, sans passer par « Commencer »
+		assertThatThrownBy(() -> voterEnLigne(alice))
+			.isInstanceOf(ResponseStatusException.class)
+			.satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode()).isEqualTo(HttpStatus.CONFLICT));
+		assertThat(ligneVoteRepository.count()).isZero();
+	}
+
+	@Test
+	void voteEnLigneSansCheckinAccepteEtBloqueLIsoloir() {
+		voterEnLigne(alice);
+
+		assertThat(ligneVoteRepository.count()).isEqualTo(1);
+		assertThat(checkinService.checkin(id(alice), qr(isoloir1)).status()).isEqualTo(ResultatCheckin.already_voted);
+	}
+
+	@Test
+	void voteEnLigneEtScanSimultanesJamaisLesDeux() throws Exception {
+		String token = qr(isoloir1);
+		List<Callable<Object>> actions = new ArrayList<>();
+		for (int i = 0; i < 10; i++) {
+			actions.add(i % 2 == 0
+					? () -> checkinService.checkin(id(chloe), token).status()
+					: () -> {
+						try {
+							voterEnLigne(chloe);
+							return "vote";
+						} catch (ResponseStatusException e) {
+							return e.getStatusCode();
+						}
+					});
+		}
+
+		ExecutorService executor = Executors.newFixedThreadPool(10);
+		for (Future<Object> f : executor.invokeAll(actions)) {
+			f.get();
+		}
+		executor.shutdown();
+
+		// Soit émargée à l'isoloir sans vote en ligne, soit vote en ligne sans émargement
+		boolean emargee = emargementRepository.count() == 1;
+		boolean voteEnLigne = ligneVoteRepository.count() == 1;
+		assertThat(emargee ^ voteEnLigne).isTrue();
+	}
+
+	@Test
+	void apiDeVoteRefuseApresCheckin() throws Exception {
+		checkinService.checkin(id(alice), qr(isoloir1));
+
+		mvc.perform(post("/api/vote/" + duel.getIdAffrontement()).header("Authorization", bearer(alice))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"idCandidatChoisi\":" + candidat1.getIdCandidat() + "}"))
+			.andExpect(status().isConflict());
+		assertThat(ligneVoteRepository.count()).isZero();
 	}
 
 }
