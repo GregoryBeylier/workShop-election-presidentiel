@@ -165,7 +165,8 @@ public class ElectionService {
 			scores.put(candidat.getIdCandidat(), new Score(CandidatDto.de(candidat)));
 		}
 
-		for (LigneVote ligne : ligneVoteRepository.findByPeriode(periode.getIdPeriode())) {
+		int nbDuels = affrontementRepository.findByPeriode(periode.getIdPeriode()).size();
+		for (LigneVote ligne : ligneVoteRepository.findCompletesByPeriode(periode.getIdPeriode(), nbDuels)) {
 			Score s1 = scores.get(ligne.getAffrontement().getCandidat1().getIdCandidat());
 			Score s2 = scores.get(ligne.getAffrontement().getCandidat2().getIdCandidat());
 			if (ligne.getCandidatChoisi() == null) {

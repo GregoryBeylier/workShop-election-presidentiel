@@ -140,7 +140,9 @@ Appelée **à chaque appui** sur A, B ou C, pour le duel affiché.
    - efface les choix provisoires ;
    - répond `TERMINE`. La borne redevient `LIBRE` d'elle-même : son vote a maintenant un bulletin.
 
-> Les choix provisoires ne comptent **jamais** dans les résultats. Seuls `bulletin` et `ligne_vote` alimentent le dépouillement : aucun demi-bulletin n'entre dans l'urne.
+> **Un vote commencé mais pas fini ne compte jamais.**
+> - Côté borne, par construction : les choix restent provisoires jusqu'au dernier duel, et le bulletin est écrit d'un coup avec toutes ses lignes. Si le vote n'est pas terminé, ses choix provisoires sont effacés.
+> - Côté résultats, en double sécurité : le classement et les statistiques ne lisent que les lignes des **bulletins complets** (autant de lignes que de duels dans la période), via `LigneVoteRepository.findCompletesByPeriode`. Ça protège aussi le vote en ligne, qui écrit ses lignes duel par duel.
 
 ### Idempotence : obligatoire
 
@@ -263,6 +265,6 @@ CREATE TABLE choix_provisoire (
 | Sujet | Aujourd'hui |
 |---|---|
 | **Abandon** (C maintenu 5 s) | Pas de route. Le votant n'est pas censé abandonner. |
-| **Vote jamais terminé** (votant parti, borne en panne) | Le vote reste ouvert : la borne reste occupée et le votant émargé sans bulletin. Il faudra une procédure (assesseur) ou une expiration automatique. |
+| **Vote jamais terminé** (votant parti, borne en panne) | Ses choix provisoires seront effacés et ne comptent de toute façon pas (voir §5). Reste à décider quand : procédure assesseur ou expiration automatique, et si le votant peut alors recommencer. En attendant, la borne reste occupée et le votant émargé sans bulletin. |
 | **HTTPS** sur la borne | HTTP sur le réseau local dédié. |
 | **Plus de 3 candidats** | 4 au maximum sur cette carte (3 GPIO libres). |

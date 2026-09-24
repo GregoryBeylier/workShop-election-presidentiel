@@ -28,6 +28,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -36,6 +37,7 @@ import fr.election.api.checkin.CheckinService.ResultatCheckin;
 import fr.election.api.checkin.CheckinService.ResultatVoteEnLigne;
 import fr.election.api.checkin.CheckinService.StatutVotant;
 import fr.election.api.election.ElectionService;
+import fr.election.api.election.dto.ResultatCandidatDto;
 import fr.election.api.model.Affrontement;
 import fr.election.api.model.Bulletin;
 import fr.election.api.model.Candidat;
@@ -86,6 +88,7 @@ class CheckinTests {
 	@Autowired CandidatRepository candidatRepository;
 	@Autowired AffrontementRepository affrontementRepository;
 	@Autowired LigneVoteRepository ligneVoteRepository;
+	@Autowired TransactionTemplate transaction;
 
 	MockMvc mvc;
 	Utilisateur alice, bob, chloe, david;
@@ -450,6 +453,29 @@ class CheckinTests {
 				.content("{\"idCandidatChoisi\":" + candidat1.getIdCandidat() + "}"))
 			.andExpect(status().isConflict());
 		assertThat(ligneVoteRepository.count()).isZero();
+	}
+
+	@Test
+	void voteIncompletNeCompteDansLesResultats() {
+		// Deuxième duel : un bulletin n'est complet qu'avec les 2
+		Candidat candidat3 = candidat(inscrire(utilisateur("cand3"), candidat1.getPeriode()));
+		Affrontement duel2 = new Affrontement();
+		duel2.setCandidat1(candidat1);
+		duel2.setCandidat2(candidat3);
+		affrontementRepository.save(duel2);
+
+		voterEnLigne(alice);
+		assertThat(victoiresCandidat1()).as("1 duel sur 2 : ne compte pas").isZero();
+
+		electionService.voter(id(alice), duel2.getIdAffrontement(), candidat1.getIdCandidat());
+		assertThat(victoiresCandidat1()).as("2 duels sur 2 : compte").isEqualTo(2);
+	}
+
+	private int victoiresCandidat1() {
+		return transaction.execute(t -> electionService.classement(candidat1.getPeriode()).stream()
+			.filter(r -> r.candidat().id().equals(candidat1.getIdCandidat()))
+			.mapToInt(ResultatCandidatDto::victoires)
+			.sum());
 	}
 
 }
