@@ -16,6 +16,7 @@ import PageVoteIsoloir from "./pages/vote/PageVoteIsoloir";
 import PageIsoloir from "./pages/isoloir/PageIsoloir";
 import PageMentionsLegales from "./pages/mentions-legales/PageMentionsLegales";
 import PageProtectionDonnees from "./pages/protection-donnees/PageProtectionDonnees";
+import PageDepouillement from "./pages/depouillement/PageDepouillement";
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
           <Route element={<Layout />}>
             <Route path="/" element={<PageAccueil />} />
             <Route path="/resultats" element={<PageResultats />} />
+            <Route path="/depouillement" element={<PageDepouillement />} />
             <Route path="/waiting" element={<PageAttente />} />
             <Route path="/mon-compte" element={<PageMonCompte />} />
             {/* Vote : choix du mode (en ligne ou isoloir), confirmation, puis la page correspondante */}
