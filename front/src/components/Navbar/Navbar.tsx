@@ -7,7 +7,6 @@ import {
   UserRound,
   ChevronDown,
   LogOut,
-  QrCode,
 } from "lucide-react";
 import { getRole, logout } from "../../api/auth";
 import logo from "../../assets/mydigitalschool-logo.png";
@@ -19,7 +18,6 @@ function Navbar() {
   const links = [
     { to: "/", label: "Accueil", icon: Home },
     { to: "/vote", label: "Voter", icon: Vote },
-    { to: "/checkin", label: "Isoloir", icon: QrCode },
     { to: "/resultats", label: "Résultats", icon: BarChart3 },
   ];
 
@@ -73,7 +71,10 @@ function Navbar() {
         {/* Navigation principale */}
         <div className="flex items-center gap-1 bg-gray-50 rounded-full p-1">
           {links.map((link) => {
-            const isActive = location.pathname === link.to;
+            // Sous-pages incluses : "Voter" reste actif sur /vote/en-ligne et /vote/isoloir
+            const isActive =
+              location.pathname === link.to ||
+              (link.to !== "/" && location.pathname.startsWith(`${link.to}/`));
             const Icon = link.icon;
             return (
               <Link

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { CheckCircle2, CircleAlert, QrCode, Vote, WifiOff } from "lucide-react";
+import { CheckCircle2, CircleAlert, QrCode, WifiOff } from "lucide-react";
 import { logout } from "../../api/auth";
 import {
   checkin,
@@ -18,8 +18,7 @@ const NETWORK_MESSAGE =
 
 /**
  * Check-in isoloir de l'électeur connecté : il scanne le QR affiché dans l'isoloir,
- * ce qui révoque définitivement son vote en ligne. Le vote en ligne n'est proposé
- * que tant que le statut est "not_voted".
+ * ce qui révoque définitivement son vote en ligne. On y arrive depuis le choix du mode de vote (/vote).
  */
 function Checkin() {
   const navigate = useNavigate();
@@ -122,12 +121,6 @@ function Checkin() {
                 En scannant le QR de l'isoloir, vous renoncez définitivement au vote en ligne,
                 même si vous ne déposez pas de bulletin.
               </p>
-              <Link
-                to="/vote"
-                className="flex items-center justify-center gap-2 rounded-lg border border-brand-dark text-brand-dark font-semibold py-3"
-              >
-                <Vote size={20} /> Je préfère voter en ligne
-              </Link>
             </div>
           ))}
 
@@ -151,6 +144,10 @@ function Checkin() {
             feedback={{ tone: "error", message: "Vous n'êtes pas inscrit à l'élection en cours." }}
           />
         )}
+
+        <Link to="/vote" className="text-sm text-gray-500 underline self-center">
+          ← Revenir au choix du mode de vote
+        </Link>
       </div>
     </div>
   );

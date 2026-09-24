@@ -10,8 +10,9 @@ import Result from "./components/result/result";
 import Waiting from "./components/Waiting/Waiting";
 import AdminHome from "./components/AdminHome/AdminHome";
 import MyAccount from "./components/MyAccount/MyAccount";
-import Vote from "./components/Vote/Vote";
 import Checkin from "./components/Checkin/Checkin";
+import VoteChoice from "./components/VoteChoice/VoteChoice";
+import OnlineVoteGuard from "./components/VoteChoice/OnlineVoteGuard";
 import Isoloir from "./components/Isoloir/Isoloir";
 
 function App() {
@@ -31,8 +32,10 @@ function App() {
             <Route path="/resultats" element={<Result />} />
             <Route path="/waiting" element={<Waiting />} />
             <Route path="/mon-compte" element={<MyAccount />} />
-            <Route path="/vote" element={<Vote />} />
-            <Route path="/checkin" element={<Checkin />} />
+            {/* Vote : choix du mode (en ligne ou isoloir), puis la page correspondante */}
+            <Route path="/vote" element={<VoteChoice />} />
+            <Route path="/vote/en-ligne" element={<OnlineVoteGuard />} />
+            <Route path="/vote/isoloir" element={<Checkin />} />
 
             {/* Pages réservées aux admins (électeur => renvoyé à l'accueil) */}
             <Route element={<ProtectedRoute role="ADMIN" />}>
