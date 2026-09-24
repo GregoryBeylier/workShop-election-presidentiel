@@ -10,6 +10,8 @@ import fr.election.api.model.Bulletin;
 
 public interface BulletinRepository extends JpaRepository<Bulletin, Integer> {
 
+	boolean existsByInscriptionIdInscription(Integer idInscription);
+
 	Optional<Bulletin> findByInscriptionIdInscription(Integer idInscription);
 
 	boolean existsByInscriptionUtilisateurIdUtilisateur(Integer idUtilisateur);

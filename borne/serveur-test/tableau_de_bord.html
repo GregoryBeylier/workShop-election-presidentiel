@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Banc de test borne</title>
+<style>
+  :root {
+    --fond: #f4f4f2; --carte: #ffffff; --texte: #2b2b2a; --doux: #6d6d69;
+    --trait: #e2e2de; --accent: #2f5bd3; --ok: #1f8a4c; --attente: #b7791f;
+    --erreur: #c0392b; --neutre: #8a8a85;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fond: #161616; --carte: #202020; --texte: #ececea; --doux: #a3a39e;
+      --trait: #333331; --accent: #7a9cff; --ok: #4cc27f; --attente: #e0a84a;
+      --erreur: #ff6f61; --neutre: #8a8a85;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--fond); color: var(--texte);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 1100px; margin: 0 auto; padding: 20px 16px 40px; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 18px; }
+  h1 { font-size: 20px; margin: 0; flex: 1 1 auto; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--doux); margin: 0 0 12px; }
+  .grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+  .carte { background: var(--carte); border: 1px solid var(--trait); border-radius: 10px; padding: 16px; }
+  .large { grid-column: 1 / -1; }
+  table { width: 100%; border-collapse: collapse; }
+  td, th { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--trait); vertical-align: middle; }
+  th { font-weight: 600; color: var(--doux); font-size: 13px; }
+  tr:last-child td { border-bottom: 0; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .pastille { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; color: #fff; }
+  .p-ok { background: var(--ok); } .p-attente { background: var(--attente); }
+  .p-erreur { background: var(--erreur); } .p-neutre { background: var(--neutre); }
+  .p-accent { background: var(--accent); }
+  .point { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
+  button {
+    font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 7px; cursor: pointer;
+    border: 1px solid var(--accent); background: var(--accent); color: #fff;
+  }
+  button.secondaire { background: transparent; color: var(--doux); border-color: var(--trait); }
+  .etat-borne { font-size: 22px; font-weight: 700; margin: 2px 0 8px; }
+  .doux { color: var(--doux); font-size: 13px; }
+  #message { min-height: 22px; margin-top: 10px; font-size: 14px; }
+  .verdict { font-size: 17px; font-weight: 700; margin: 12px 0 0; }
+  .journal { font: 12.5px/1.5 ui-monospace, "SF Mono", Menlo, monospace; max-height: 460px; overflow: auto; }
+  .journal > div { padding: 4px 0; border-bottom: 1px dashed var(--trait); }
+  .journal .corps { color: var(--doux); padding-left: 76px; white-space: pre-wrap; word-break: break-all; }
+  .suivi { margin: 8px 0 6px; padding-left: 22px; }
+  .suivi li { margin: 2px 0; }
+  .suivi .en-cours { color: var(--attente); }
+  .code-ok { color: var(--ok); } .code-err { color: var(--erreur); }
+  .hors-ligne { color: var(--erreur); font-weight: 600; }
+  @media (max-width: 520px) { .masquer-mobile { display: none; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Borne de vote : banc de test</h1>
+    <span id="scrutin"></span>
+    <button class="secondaire" onclick="reinitialiser()">Réinitialiser la fausse base</button>
+  </header>
+
+  <div class="grille">
+    <section class="carte">
+      <h2>Borne</h2>
+      <div id="bornes">Chargement…</div>
+    </section>
+
+    <section class="carte">
+      <h2>Électeurs · fausse app</h2>
+      <table><tbody id="electeurs"></tbody></table>
+      <div id="message"></div>
+    </section>
+
+    <section class="carte large">
+      <h2>Résultats</h2>
+      <div id="resultats"></div>
+    </section>
+
+    <section class="carte large">
+      <h2>Journal des échanges</h2>
+      <div class="journal" id="journal"></div>
+    </section>
+  </div>
+</main>
+
+<script>
+const LIBELLES = {
+  pas_vote: ["pas voté", "p-neutre"], en_cours: ["en cours", "p-attente"],
+  a_vote: ["a voté", "p-ok"], non_inscrit: ["non inscrit", "p-erreur"],
+};
+const VERDICTS = {
+  aucun_vainqueur: "Aucun vainqueur pour l'instant",
+  cycle_condorcet: "Pas de vainqueur : cycle de Condorcet",
+  egalite: "Égalité en tête",
+};
+
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function rendreBornes(bornes) {
+  return bornes.map(b => {
+    // Pendant un vote, la borne n'appelle le serveur qu'à chaque appui :
+    // un silence de plus de 10 s veut juste dire que le votant réfléchit.
+    const enLigne = b.vote
+      ? `<span class="point" style="background:var(--attente)"></span>vote en cours · dernier échange il y a ${Math.round(b.secondesDepuisContact ?? 0)} s`
+      : b.enLigne
+      ? `<span class="point" style="background:var(--ok)"></span>en ligne · dernier contact il y a ${b.secondesDepuisContact} s`
+      : `<span class="point" style="background:var(--erreur)"></span><span class="hors-ligne">hors ligne</span>`
+        + (b.secondesDepuisContact === null ? " · jamais contactée" : ` · dernier contact il y a ${Math.round(b.secondesDepuisContact)} s`);
+    const occupee = b.etat === "DEVERROUILLEE";
+    return `<div>
+      <div class="doux">${esc(b.nom)} (id ${b.idBorne})</div>
+      <div class="etat-borne" style="color:${occupee ? "var(--attente)" : "var(--ok)"}">${occupee ? "DÉVERROUILLÉE" : "LIBRE"}</div>
+      <div class="doux">${enLigne}</div>
+      ${b.vote ? rendreVote(b.vote) : ""}
+    </div>`;
+  }).join("<hr style='border:0;border-top:1px solid var(--trait)'>");
+}
+
+// Vote en cours : duel affiché sur la borne + choix déjà reçus (provisoires).
+function rendreVote(v) {
+  const recus = v.choixRecus.map((c, i) =>
+    `<li>${esc(c.duel)} → <b>${c.choix}</b> (${esc(c.pour)})</li>`).join("");
+  const enCours = v.duelEnCours
+    ? `<li class="en-cours">${esc(v.duelEnCours.duel)} → <i>en attente d'un appui…</i></li>` : "";
+  const numero = v.duelEnCours ? `duel ${v.duelEnCours.numero}/${v.duelEnCours.total}` : "";
+  return `<div style="margin-top:10px">
+    Votant : <b>${esc(v.votant)}</b> · ${numero} · expire dans ${v.expireDans} s
+    <ol class="suivi">${recus}${enCours}</ol>
+    <div class="doux">Choix provisoires : versés dans l'urne seulement au dernier duel.</div>
+  </div>`;
+}
+
+function rendreElecteurs(electeurs) {
+  return electeurs.map(e => {
+    const [libelle, classe] = LIBELLES[e.statut] || [e.statut, "p-neutre"];
+    const suite = e.statut === "en_cours" ? ` borne ${e.idBorne}` : "";
+    return `<tr>
+      <td>${esc(e.nom)}</td>
+      <td><span class="pastille ${classe}">${libelle}${suite}</span></td>
+      <td class="num"><button onclick="deverrouiller(${e.idUtilisateur}, '${esc(e.nom)}')">Déverrouiller la borne 1</button></td>
+    </tr>`;
+  }).join("");
+}
+
+function rendreResultats(r) {
+  if (!r) return `<p class="doux">Aucun scrutin ouvert.</p>`;
+  const candidats = `<table>
+    <thead><tr><th>LED</th><th>Candidat</th><th class="num">Duels gagnés</th><th class="num">Voix (tous duels)</th></tr></thead>
+    <tbody>${r.candidats.map(c => `<tr><td>${c.led}</td><td>${esc(c.nom)}</td><td class="num">${c.victoires}</td><td class="num">${c.voix}</td></tr>`).join("")}</tbody>
+  </table>`;
+  const duels = `<table style="margin-top:14px">
+    <thead><tr><th class="masquer-mobile">Affr.</th><th>Gauche (A)</th><th class="num">Voix</th><th>Droite (B)</th><th class="num">Voix</th><th class="num">Blancs (C)</th></tr></thead>
+    <tbody>${r.duels.map(d => `<tr>
+      <td class="masquer-mobile doux">#${d.idAffrontement}</td>
+      <td>${d.gagnant === d.gauche ? "<b>" + esc(d.gauche) + "</b>" : esc(d.gauche)}</td><td class="num">${d.votesGauche}</td>
+      <td>${d.gagnant === d.droite ? "<b>" + esc(d.droite) + "</b>" : esc(d.droite)}</td><td class="num">${d.votesDroite}</td>
+      <td class="num">${d.blancs}</td></tr>`).join("")}</tbody>
+  </table>`;
+  const verdict = r.resolution === "vainqueur" ? `Vainqueur : ${esc(r.vainqueur)}` : VERDICTS[r.resolution];
+  return `<div class="doux">${r.nbBulletins} bulletin(s) dans l'urne</div>${candidats}${duels}<p class="verdict">${verdict}</p>`;
+}
+
+function rendreJournal(lignes) {
+  if (!lignes.length) return `<span class="doux">Rien pour l'instant. Allume la borne ou clique sur « Déverrouiller ».</span>`;
+  return lignes.map(l => {
+    const code = l.code === "" ? "" : ` <span class="${l.code < 300 ? "code-ok" : "code-err"}">→ ${l.code}</span>`;
+    const recu = l.recu ? `<div class="corps">reçu    : ${esc(l.recu)}</div>` : "";
+    const repondu = l.repondu ? `<div class="corps">répondu : ${esc(l.repondu)}</div>` : "";
+    return `<div>${l.heure}  [${esc(l.qui)}] ${esc(l.texte)}${code}${recu}${repondu}</div>`;
+  }).join("");
+}
+
+let serveurPerdu = false;
+async function rafraichir() {
+  try {
+    const v = await (await fetch("/debug/vue")).json();
+    serveurPerdu = false;
+    document.getElementById("scrutin").innerHTML = v.scrutinOuvert
+      ? `<span class="pastille p-ok">scrutin ouvert</span>` : `<span class="pastille p-erreur">scrutin fermé</span>`;
+    document.getElementById("bornes").innerHTML = rendreBornes(v.bornes);
+    document.getElementById("electeurs").innerHTML = rendreElecteurs(v.electeurs);
+    document.getElementById("resultats").innerHTML = rendreResultats(v.resultats);
+    document.getElementById("journal").innerHTML = rendreJournal(v.journal);
+  } catch {
+    if (!serveurPerdu) afficherMessage("Serveur injoignable : est-ce que serveur.py tourne toujours ?", false);
+    serveurPerdu = true;
+  }
+}
+
+function afficherMessage(texte, ok) {
+  const m = document.getElementById("message");
+  m.innerHTML = `<span style="color:${ok ? "var(--ok)" : "var(--erreur)"}">${esc(texte)}</span>`;
+}
+
+async function deverrouiller(idUtilisateur, nom) {
+  const rep = await fetch("/api/bornes/1/deverrouiller", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ idUtilisateur }),
+  });
+  const corps = await rep.json();
+  afficherMessage(`${nom} : ${rep.status} ${corps.message || corps.erreur}`, rep.ok);
+  rafraichir();
+}
+
+async function reinitialiser() {
+  if (!confirm("Effacer tous les bulletins et repartir de la fausse base de départ ?")) return;
+  await fetch("/debug/reset", { method: "POST" });
+  afficherMessage("Fausse base réinitialisée.", true);
+  rafraichir();
+}
+
+rafraichir();
+setInterval(rafraichir, 1000);
+</script>
+</body>
+</html>

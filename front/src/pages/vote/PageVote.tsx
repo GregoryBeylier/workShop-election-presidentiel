@@ -102,7 +102,7 @@ function PageVote() {
   };
 
   const handleConfirm = () => {
-    if (!selectedId || isConfirming) return;
+    if (selectedId === null || isConfirming) return;
     setIsConfirming(true);
     envoyer(selectedId);
   };

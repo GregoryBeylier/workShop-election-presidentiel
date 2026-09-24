@@ -1,50 +1,74 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type SubmitEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { UserRound, Lock, Bell, CheckSquare, BadgeCheck } from "lucide-react";
-import { logout } from "../../api/auth";
+import { UserRound, Lock, BadgeCheck, Eye, EyeOff } from "lucide-react";
+import { changerMotDePasse, logout } from "../../api/auth";
 import Avatar from "../../components/ui/Avatar";
 import { initialesEmail } from "../../utils/format";
-import {
-  getMonVote,
-  getProfil,
-  type MonVote,
-  type Profil,
-} from "../../api/election";
+import { reglesMotDePasse } from "../../utils/motDePasse";
+import ReglesMotDePasse from "../changer-mot-de-passe/ReglesMotDePasse";
+import { getProfil, type Profil } from "../../api/election";
 
-type Tab = "informations" | "securite" | "notifications" | "vote";
+type Tab = "informations" | "securite";
 
 /**
  * Page "Mon compte" de l'espace électeur.
- * Affiche ses informations (email, rôle), son statut de vote
- * et ses préférences de notifications.
+ * Permet de consulter/modifier ses informations et son mot de passe.
  */
 function PageMonCompte() {
   const navigate = useNavigate();
 
   const [profil, setProfil] = useState<Profil | null>(null);
-  const [monVote, setMonVote] = useState<MonVote | null>(null);
 
   useEffect(() => {
     getProfil()
       .then(setProfil)
       .catch(() => {});
-    getMonVote()
-      .then(setMonVote)
-      .catch(() => {});
   }, []);
 
   const [activeTab, setActiveTab] = useState<Tab>("informations");
-  const [emailAlerts, setEmailAlerts] = useState(true);
+
+  // Formulaire de changement de mot de passe (onglet Sécurité)
+  const [modificationOuverte, setModificationOuverte] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [enCours, setEnCours] = useState(false);
+  const [succes, setSucces] = useState(false);
+
+  const isPasswordValid = reglesMotDePasse(password).valide;
+  const passwordsMatch = password === confirmPassword;
+
+  const fermerModification = () => {
+    setModificationOuverte(false);
+    setPassword("");
+    setConfirmPassword("");
+    setErreur(null);
+  };
+
+  const handleChangerMotDePasse = async (e: SubmitEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!passwordsMatch || !isPasswordValid) return;
+    setErreur(null);
+    setEnCours(true);
+    try {
+      await changerMotDePasse(password);
+      setModificationOuverte(false);
+      setPassword("");
+      setConfirmPassword("");
+      setSucces(true);
+    } catch (err) {
+      setErreur(err instanceof Error ? err.message : "Erreur, réessayez");
+    } finally {
+      setEnCours(false);
+    }
+  };
 
   const email = profil?.email ?? localStorage.getItem("email") ?? "";
-  const duelsFaits = monVote?.duels.filter((d) => d.fait).length ?? 0;
-  const duelsTotal = monVote?.duels.length ?? 0;
 
   const tabs: { id: Tab; label: string; icon: typeof UserRound }[] = [
     { id: "informations", label: "Mes informations", icon: UserRound },
     { id: "securite", label: "Sécurité", icon: Lock },
-    { id: "notifications", label: "Notifications", icon: Bell },
-    { id: "vote", label: "Mon vote", icon: CheckSquare },
   ];
 
   const handleLogout = () => {
@@ -121,49 +145,6 @@ function PageMonCompte() {
                 </dl>
               </div>
 
-              <div className="bg-white rounded-xl shadow p-6 flex flex-col gap-5">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium text-brand-dark">
-                      Mot de passe
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("securite")}
-                    className="self-start sm:self-auto border border-gray-300 text-gray-700 rounded-md px-4 py-1.5 text-sm font-medium hover:bg-gray-50 transition-colors duration-300"
-                  >
-                    Modifier
-                  </button>
-                </div>
-
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-gray-100 pt-5">
-                  <div>
-                    <p className="text-sm font-medium text-brand-dark">
-                      Alertes par e-mail
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Ouverture et clôture du scrutin, publication des résultats
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={emailAlerts}
-                    onClick={() => setEmailAlerts((v) => !v)}
-                    className={`w-11 h-6 rounded-full transition-colors duration-300 relative shrink-0 ${
-                      emailAlerts ? "bg-brand-teal" : "bg-gray-300"
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${
-                        emailAlerts ? "translate-x-5" : ""
-                      }`}
-                    />
-                  </button>
-                </div>
-              </div>
-
               <button
                 type="button"
                 onClick={handleLogout}
@@ -175,41 +156,112 @@ function PageMonCompte() {
           )}
 
           {activeTab === "securite" && (
-            <div className="bg-white rounded-xl shadow p-6">
-              <h2 className="font-semibold text-brand-dark mb-2">Sécurité</h2>
-              <p className="text-sm text-gray-500">
-                Gestion du mot de passe — à venir.
-              </p>
-            </div>
-          )}
+            <div className="bg-white rounded-xl shadow p-6 flex flex-col gap-5">
+              <h2 className="font-semibold text-brand-dark">Sécurité</h2>
 
-          {activeTab === "notifications" && (
-            <div className="bg-white rounded-xl shadow p-6">
-              <h2 className="font-semibold text-brand-dark mb-2">
-                Notifications
-              </h2>
-              <p className="text-sm text-gray-500">
-                Préférences de notifications détaillées — à venir.
-              </p>
-            </div>
-          )}
+              {!modificationOuverte ? (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-brand-dark">
+                      Mot de passe
+                    </p>
+                    {succes && (
+                      <p className="text-xs text-green-600 mt-0.5">
+                        Mot de passe mis à jour.
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSucces(false);
+                      setModificationOuverte(true);
+                    }}
+                    className="self-start sm:self-auto border border-gray-300 text-gray-700 rounded-md px-4 py-1.5 text-sm font-medium hover:bg-gray-50 transition-colors duration-300"
+                  >
+                    Modifier
+                  </button>
+                </div>
+              ) : (
+                <form
+                  onSubmit={handleChangerMotDePasse}
+                  className="flex flex-col gap-4 border-t border-gray-100 pt-5"
+                >
+                  <div className="flex flex-col gap-1">
+                    <label htmlFor="nouveauMdp" className="text-sm text-gray-700">
+                      Nouveau mot de passe
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="nouveauMdp"
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="8 caractères minimum"
+                        minLength={8}
+                        required
+                        className="border border-gray-300 rounded-md py-2 px-4 w-full pr-10 focus:outline-none focus:ring-2 focus:ring-brand-teal"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((v) => !v)}
+                        aria-label={
+                          showPassword
+                            ? "Masquer le mot de passe"
+                            : "Afficher le mot de passe"
+                        }
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                      >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                    {password.length > 0 && (
+                      <ReglesMotDePasse motDePasse={password} />
+                    )}
+                  </div>
 
-          {activeTab === "vote" && (
-            <div className="bg-white rounded-xl shadow p-6">
-              <h2 className="font-semibold text-brand-dark mb-2">Mon vote</h2>
-              <p className="text-sm text-gray-500">
-                Statut :{" "}
-                {!monVote
-                  ? "…"
-                  : !monVote.inscrit
-                    ? "vous n'êtes pas inscrit à ce scrutin"
-                    : duelsTotal > 0 && duelsFaits === duelsTotal
-                      ? "vous avez déjà voté"
-                      : duelsFaits > 0
-                        ? `vote en cours (${duelsFaits} duels sur ${duelsTotal})`
-                        : "vous n'avez pas encore voté"}
-                .
-              </p>
+                  <div className="flex flex-col gap-1">
+                    <label
+                      htmlFor="confirmerMdp"
+                      className="text-sm text-gray-700"
+                    >
+                      Confirmer le mot de passe
+                    </label>
+                    <input
+                      id="confirmerMdp"
+                      type={showPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                      className="border border-gray-300 rounded-md py-2 px-4 w-full focus:outline-none focus:ring-2 focus:ring-brand-teal"
+                    />
+                    {!passwordsMatch && confirmPassword.length > 0 && (
+                      <p className="text-sm text-red-500">
+                        Les mots de passe ne correspondent pas
+                      </p>
+                    )}
+                  </div>
+
+                  {erreur && <p className="text-sm text-red-500">{erreur}</p>}
+
+                  <div className="flex gap-3">
+                    <button
+                      type="submit"
+                      disabled={!passwordsMatch || !isPasswordValid || enCours}
+                      className="bg-brand-teal text-white rounded-md px-5 py-2 text-sm font-medium hover:bg-brand-teal-dark transition-colors duration-300 disabled:opacity-50"
+                    >
+                      {enCours ? "Enregistrement…" : "Enregistrer"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={fermerModification}
+                      className="border border-gray-300 text-gray-700 rounded-md px-5 py-2 text-sm font-medium hover:bg-gray-50 transition-colors duration-300"
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
           )}
         </div>

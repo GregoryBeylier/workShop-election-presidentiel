@@ -41,6 +41,11 @@ function Navbar() {
     { to: "/mon-compte", label: "Compte", icon: UserRound },
   ];
 
+  // Sous-pages incluses : "Voter" reste actif sur /vote/en-ligne et /vote/isoloir
+  const estActif = (to: string) =>
+    location.pathname === to ||
+    (to !== "/" && location.pathname.startsWith(`${to}/`));
+
   // Menu déroulant "Mon compte / Déconnexion"
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -91,7 +96,7 @@ function Navbar() {
           {/* Navigation principale (sur mobile : barre du bas) */}
           <div className="hidden md:flex items-center gap-1 bg-gray-50 rounded-full p-1">
             {links.map((link) => {
-              const isActive = location.pathname === link.to;
+              const isActive = estActif(link.to);
               const Icon = link.icon;
               return (
                 <Link
@@ -179,7 +184,7 @@ function Navbar() {
       >
         <div className="h-16 grid grid-flow-col auto-cols-fr">
           {liensMobile.map((link) => {
-            const isActive = location.pathname === link.to;
+            const isActive = estActif(link.to);
             const Icon = link.icon;
             return (
               <Link

@@ -70,7 +70,7 @@ function PageAccueil() {
             to="/vote"
             className="bg-white text-brand-dark rounded-md px-5 py-3 font-medium hover:bg-gray-100 transition-colors duration-300 inline-flex items-center justify-center gap-2"
           >
-            Continuer à voter →
+            {duelsFaits === 0 ? "Commencer le vote" : "Continuer le vote"} →
           </Link>
           <Link
             to="/resultats"
