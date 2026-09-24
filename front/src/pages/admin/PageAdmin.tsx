@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LayoutDashboard, Users, UserRoundCheck } from "lucide-react";
+import { LayoutDashboard, QrCode, Users, UserRoundCheck } from "lucide-react";
 import { getCandidatsAdmin, getStats } from "../../api/admin";
 import { usePolling } from "../../hooks/usePolling";
 import Alerte from "../../components/ui/Alerte";
@@ -9,8 +9,9 @@ import PilotageScrutin from "./PilotageScrutin";
 import OngletTableauDeBord from "./tableau-de-bord/OngletTableauDeBord";
 import OngletInscriptions from "./inscriptions/OngletInscriptions";
 import OngletCandidats from "./candidats/OngletCandidats";
+import OngletIsoloirs from "./isoloirs/OngletIsoloirs";
 
-type IdOnglet = "tableau" | "inscriptions" | "candidats";
+type IdOnglet = "tableau" | "inscriptions" | "candidats" | "isoloirs";
 
 const onglets: Onglet<IdOnglet>[] = [
   {
@@ -21,6 +22,7 @@ const onglets: Onglet<IdOnglet>[] = [
   },
   { id: "inscriptions", label: "Inscriptions", icon: Users },
   { id: "candidats", label: "Candidats", icon: UserRoundCheck },
+  { id: "isoloirs", label: "Isoloirs", icon: QrCode },
 ];
 
 // Rafraîchissement des statistiques en temps réel
@@ -28,7 +30,7 @@ const INTERVALLE_STATS_MS = 5000;
 
 /**
  * Espace administrateur : pilotage du scrutin (démarrer / clôturer),
- * statistiques en direct, gestion des électeurs et des candidats.
+ * statistiques en direct, gestion des électeurs, des candidats et des isoloirs.
  */
 function PageAdmin() {
   const [onglet, setOnglet] = useState<IdOnglet>("tableau");
@@ -96,6 +98,7 @@ function PageAdmin() {
             onChange={rafraichir}
           />
         )}
+        {onglet === "isoloirs" && <OngletIsoloirs />}
       </div>
     </>
   );

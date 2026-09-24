@@ -137,3 +137,34 @@ export const supprimerLogoCandidat = (idCandidat: number) =>
 
 export const retirerCandidat = (idCandidat: number) =>
   apiFetch<void>(`/admin/candidats/${idCandidat}`, { method: "DELETE" });
+
+export interface IsoloirAdmin {
+  id: number;
+  libelle: string;
+  actif: boolean;
+  aUneBorne: boolean;
+  borneEnLigne: boolean; // la borne a appelé le serveur il y a moins de 10 s
+  voteEnCours: boolean; // un votant a scanné et n'a pas encore fini sur la borne
+}
+
+/** Clés en clair de l'isoloir créé : renvoyées une seule fois, la base n'en garde que l'empreinte. */
+export interface IsoloirCree {
+  id: number;
+  libelle: string;
+  cleEcran: string;
+  cleBorne: string;
+}
+
+export const getIsoloirs = () => apiFetch<IsoloirAdmin[]>("/admin/isoloirs");
+
+export const creerIsoloir = (libelle: string) =>
+  apiFetch<IsoloirCree>("/admin/isoloirs", {
+    method: "POST",
+    body: { libelle },
+  });
+
+/** Écran ou borne perdu / manipulé : ses QR et sa borne sont refusés tout de suite. */
+export const desactiverIsoloir = (idIsoloir: number) =>
+  apiFetch<void>(`/admin/isoloirs/${idIsoloir}/desactiver`, {
+    method: "POST",
+  });
