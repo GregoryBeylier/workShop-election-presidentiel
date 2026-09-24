@@ -103,10 +103,9 @@ s'affiche dans n'importe quel navigateur récent. Chaque écran a sa propre adre
 
 ### Reste à faire
 
-1. **Avant de fusionner dans `main`** : lancer `sql/migration-postgres.sql` sur Neon
-   (toutes les requêtes, test et prod, sont détaillées pas à pas dans `sql/guide-neon.sql`). Le back vérifie
-   le schéma au démarrage (`ddl-auto=validate`) : sans ces tables, il refusera de démarrer pour toute l'équipe.
-   Puis créer les isoloirs (exemple en bas du script).
+1. ~~Lancer `sql/migration-postgres.sql` sur la base Neon de prod~~ : **fait le 24/09/2026**.
+   Reste à créer les vrais isoloirs le jour de l'installation : voir le README à la racine du dépôt
+   et l'étape 4 de `sql/guide-neon.sql`.
 2. **Vote en ligne (branche `alex`)** : `ElectionService.voter()` doit prendre le même verrou
    (`InscriptionRepository.findPeriodeOuverteForUpdate`) et refuser le vote s'il existe un
    `emargement_isoloir`. Sans ça, un votant émargé à l'isoloir peut encore voter en ligne.
