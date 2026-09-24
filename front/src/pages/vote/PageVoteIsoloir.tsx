@@ -1,27 +1,46 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { QrCode } from "lucide-react";
 import { ApiError } from "../../api/client";
-import { checkin } from "../../api/checkin";
+import { checkin, getStatutVotant } from "../../api/checkin";
 import { useStatutVotant } from "../../hooks/useStatutVotant";
 import Alerte, { type Message } from "../../components/ui/Alerte";
 import Bouton from "../../components/ui/Bouton";
 import MessagePage from "../../components/ui/MessagePage";
 import AvertissementChoix from "./AvertissementChoix";
 import ScannerQr from "./ScannerQr";
+import VoteTermine from "./VoteTermine";
 
 const MESSAGE_RESEAU =
   "Connexion impossible. Vérifiez que vous êtes connecté au Wi-Fi de l'école, puis réessayez.";
 
+// Pendant le vote sur la borne, on demande au serveur où en est le votant
+const INTERVALLE_SUIVI_MS = 2000;
+
 /**
- * Check-in isoloir : l'électeur scanne le QR affiché dans l'isoloir, ce qui révoque
- * définitivement son vote en ligne. On y arrive depuis le choix du mode de vote (/vote).
+ * Check-in isoloir : l'électeur scanne le QR affiché dans l'isoloir, ce qui ouvre son vote
+ * sur la borne et révoque définitivement son vote en ligne. La page suit ensuite le vote
+ * jusqu'à ce que la borne ait enregistré le bulletin. On y arrive depuis /vote.
  */
 function PageVoteIsoloir() {
   const { statut, erreur, setStatut } = useStatutVotant();
   const [scanEnCours, setScanEnCours] = useState(false);
   const [envoi, setEnvoi] = useState(false);
   const [message, setMessage] = useState<Message | null>(null);
+
+  // Vote en cours sur la borne : on attend que le serveur annonce le bulletin enregistré.
+  // Une erreur réseau passagère est ignorée, l'appel suivant réessaie.
+  useEffect(() => {
+    if (statut !== "checked_in_isoloir") return;
+    const id = setInterval(() => {
+      getStatutVotant()
+        .then((s) => {
+          if (s !== "checked_in_isoloir") setStatut(s);
+        })
+        .catch(() => {});
+    }, INTERVALLE_SUIVI_MS);
+    return () => clearInterval(id);
+  }, [statut, setStatut]);
 
   const handleScan = async (qrToken: string) => {
     setScanEnCours(false);
@@ -31,10 +50,10 @@ function PageVoteIsoloir() {
       const res = await checkin(qrToken);
       if (res.status === "success") {
         setStatut("checked_in_isoloir");
-        setMessage({ type: "succes", texte: res.message });
       } else {
         setMessage({ type: "erreur", texte: res.message });
-        if (res.status === "already_voted") setStatut("voted_app");
+        // Déjà voté (en ligne ou sur une borne) : le serveur dit lequel
+        if (res.status === "already_voted") setStatut(await getStatutVotant());
         if (res.status === "not_registered") setStatut("not_registered");
       }
     } catch (e) {
@@ -53,6 +72,10 @@ function PageVoteIsoloir() {
     setScanEnCours(true);
   };
 
+  if (statut === "voted_booth") {
+    return <VoteTermine />;
+  }
+
   return (
     <div className="flex justify-center px-4 py-8 sm:py-12">
       <div className="flex h-fit w-full max-w-md flex-col gap-4 rounded-3xl bg-white p-6 shadow-lg">
@@ -60,8 +83,7 @@ function PageVoteIsoloir() {
 
         {statut === "not_voted" && (
           <AvertissementChoix>
-            En scannant le QR de l'isoloir, vous renoncez <b>définitivement</b> au vote en ligne,
-            même si vous ne déposez pas de bulletin.
+            En scannant le QR de l'isoloir, vous renoncez <b>définitivement</b> au vote en ligne.
           </AvertissementChoix>
         )}
 
@@ -78,7 +100,7 @@ function PageVoteIsoloir() {
           ) : (
             <>
               <p className="text-gray-600">
-                Scannez le QR code affiché sur l'écran de l'isoloir, puis votez sur le bulletin papier.
+                Scannez le QR code affiché sur l'écran de l'isoloir, puis votez sur la borne.
               </p>
               <Bouton onClick={lancerScan} className="py-3 text-base">
                 <QrCode size={20} /> {message ? "Relancer le scan" : "Scanner le QR de l'isoloir"}
@@ -86,11 +108,8 @@ function PageVoteIsoloir() {
             </>
           ))}
 
-        {statut === "checked_in_isoloir" && message?.type !== "succes" && (
-          <Alerte
-            message={{ type: "succes", texte: "Vous êtes identifié dans un isoloir : votez sur le bulletin papier." }}
-          />
-        )}
+        {statut === "checked_in_isoloir" && <InstructionsBorne />}
+
         {statut === "voted_app" && !message && (
           <Alerte message={{ type: "succes", texte: "Vous avez déjà choisi de voter en ligne." }} />
         )}
@@ -98,11 +117,43 @@ function PageVoteIsoloir() {
           <Alerte message={{ type: "erreur", texte: "Vous n'êtes pas inscrit à l'élection en cours." }} />
         )}
 
-        <Link to="/vote" className="self-center text-sm text-gray-500 underline">
-          ← Revenir au choix du mode de vote
-        </Link>
+        {statut !== "checked_in_isoloir" && (
+          <Link to="/vote" className="self-center text-sm text-gray-500 underline">
+            ← Revenir au choix du mode de vote
+          </Link>
+        )}
       </div>
     </div>
+  );
+}
+
+/** Mode d'emploi de la borne, affiché pendant que le votant y vote. */
+function InstructionsBorne() {
+  return (
+    <>
+      <Alerte message={{ type: "succes", texte: "Identification réussie : votez maintenant sur la borne." }} />
+      <div className="flex flex-col gap-2 text-gray-600">
+        <p>
+          La borne allume deux candidats, un à gauche et un à droite. Pour chaque duel, appuyez sur :
+        </p>
+        <ul className="flex flex-col gap-1 pl-1">
+          <li>
+            <b className="text-brand-dark">A</b> pour le candidat de gauche,
+          </li>
+          <li>
+            <b className="text-brand-dark">B</b> pour le candidat de droite,
+          </li>
+          <li>
+            <b className="text-brand-dark">C</b> pour voter blanc.
+          </li>
+        </ul>
+        <p>Un jingle confirme chaque choix, puis le duel suivant s'allume.</p>
+      </div>
+      <p className="flex items-center justify-center gap-2 text-sm text-gray-500" role="status">
+        <span className="h-2 w-2 animate-pulse rounded-full bg-brand-teal" />
+        En attente de la fin de votre vote…
+      </p>
+    </>
   );
 }
 
