@@ -11,6 +11,8 @@ import PageAttente from "./pages/attente/PageAttente";
 import PageResultats from "./pages/resultats/PageResultats";
 import PageMonCompte from "./pages/mon-compte/PageMonCompte";
 import PageAdmin from "./pages/admin/PageAdmin";
+import PageMentionsLegales from "./pages/mentions-legales/PageMentionsLegales";
+import PageProtectionDonnees from "./pages/protection-donnees/PageProtectionDonnees";
 
 function App() {
   return (
@@ -31,6 +33,14 @@ function App() {
             <Route path="/waiting" element={<PageAttente />} />
             <Route path="/mon-compte" element={<PageMonCompte />} />
             <Route path="/vote" element={<PageVote />} />
+            <Route
+              path="/mentions-legales"
+              element={<PageMentionsLegales />}
+            />
+            <Route
+              path="/protection-donnees"
+              element={<PageProtectionDonnees />}
+            />
 
             {/* Pages réservées aux admins (électeur => renvoyé à l'accueil) */}
             <Route element={<RouteProtegee role="ADMIN" />}>

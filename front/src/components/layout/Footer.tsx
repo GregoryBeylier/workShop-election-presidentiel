@@ -68,22 +68,22 @@ function Footer() {
           </h3>
           <ul className="flex flex-col gap-2 text-sm">
             <li>
-              <a
-                href="/mentions-legales"
+              <Link
+                to="/mentions-legales"
                 className="flex items-center gap-2 hover:text-brand-teal transition-colors duration-300"
               >
                 <ShieldCheck size={14} />
                 Mentions légales
-              </a>
+              </Link>
             </li>
             <li>
-              <a
-                href="/protection-donnees"
+              <Link
+                to="/protection-donnees"
                 className="flex items-center gap-2 hover:text-brand-teal transition-colors duration-300"
               >
                 <ShieldCheck size={14} />
                 Protection des données
-              </a>
+              </Link>
             </li>
             <li>
               <a

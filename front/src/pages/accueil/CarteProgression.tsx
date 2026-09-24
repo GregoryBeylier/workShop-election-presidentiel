@@ -51,7 +51,7 @@ function CarteProgression({
         to="/vote"
         className="block text-center bg-brand-teal text-white rounded-md py-3 font-medium hover:bg-brand-teal-dark transition-colors duration-300"
       >
-        Reprendre où j'en étais
+        {faits === 0 ? "Commencer le vote" : "Continuer le vote"}
       </Link>
     </div>
   );
