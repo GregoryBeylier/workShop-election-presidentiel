@@ -96,6 +96,12 @@ function PageProtectionDonnees() {
           </p>
         </section>
       </div>
+
+      <p className="mt-12 text-center text-xs text-gray-300">
+        Si tu as lu jusqu'ici : bravo pour ta curiosité, et sache qu'on a mis
+        tout notre cœur (et pas mal de cafés ☕) dans ce projet. Merci de nous
+        lire ! — L'équipe dev
+      </p>
     </div>
   );
 }
