@@ -1,5 +1,16 @@
 
+<<<<<<< Updated upstream
 import { Trophy } from "lucide-react";
+=======
+import React from "react";
+import { Trophy, Clock } from "lucide-react";
+
+// Statut du scrutin, renvoyé par le back plus tard (ex: GET /scrutin/statut).
+// "ouvert"            → le vote n'est pas terminé, pas de résultats à montrer
+// "cloture_en_attente" → le vote est clos mais les résultats ne sont pas encore publiés (dépouillement)
+// "publie"            → les résultats peuvent être affichés
+type ScrutinStatus = "ouvert" | "cloture_en_attente" | "publie";
+>>>>>>> Stashed changes
 
 type Candidate = {
   id: number;
@@ -38,6 +49,40 @@ const candidates: Candidate[] = [
 ];
 
 function Result() {
+  // TODO: remplacer par le statut réel renvoyé par l'API une fois le back prêt.
+  // Pour tester les 3 écrans en attendant, change juste cette valeur :
+  // "ouvert" | "cloture_en_attente" | "publie"
+  const scrutinStatus: ScrutinStatus = "publie";
+
+  if (scrutinStatus !== "publie") {
+    return (
+      <main className="min-h-screen bg-[#F5F5F5] flex items-center justify-center px-4">
+        <div className="w-full max-w-md rounded-3xl bg-white p-8 text-center shadow-lg sm:p-10">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-[#2EC7D3]/10">
+            <Clock className="h-8 w-8 text-[#2EC7D3]" />
+          </div>
+
+          <h1 className="text-2xl font-black text-[#3C3C3B] mb-3">
+            {scrutinStatus === "ouvert"
+              ? "Le scrutin est encore ouvert"
+              : "Dépouillement en cours"}
+          </h1>
+
+          <p className="text-sm text-gray-500 mb-6">
+            {scrutinStatus === "ouvert"
+              ? "Les résultats seront visibles une fois le vote terminé. Revenez après la clôture du scrutin."
+              : "Le vote est clos, les résultats sont en cours de vérification et seront publiés très prochainement."}
+          </p>
+
+          <div className="flex items-center justify-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
+            <span className="h-2 w-2 rounded-full bg-[#2EC7D3] animate-pulse" />
+            En attente de publication
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   // =================================================
   // ================= CALCULS =======================
   // =================================================
