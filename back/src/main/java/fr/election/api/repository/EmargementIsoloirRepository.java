@@ -1,5 +1,6 @@
 package fr.election.api.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,5 +19,13 @@ public interface EmargementIsoloirRepository extends JpaRepository<EmargementIso
 			where e.isoloir.idIsoloir = :idIsoloir and e.inscription.periode.statut = true
 			and not exists (select b from Bulletin b where b.inscription = e.inscription)""")
 	boolean existsVoteOuvert(@Param("idIsoloir") Integer idIsoloir);
+
+	// Mêmes conditions que existsVoteOuvert, pour la borne : le vote à lui faire jouer (le plus ancien d'abord)
+	@Query("""
+			select e from EmargementIsoloir e
+			where e.isoloir.idIsoloir = :idIsoloir and e.inscription.periode.statut = true
+			and not exists (select b from Bulletin b where b.inscription = e.inscription)
+			order by e.emargeLe, e.idEmargement""")
+	List<EmargementIsoloir> findVotesOuverts(@Param("idIsoloir") Integer idIsoloir);
 
 }

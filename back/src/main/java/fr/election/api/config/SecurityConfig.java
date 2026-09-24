@@ -51,6 +51,9 @@ public class SecurityConfig {
 				.requestMatchers(HttpMethod.GET, "/api/candidats/*/photo", "/api/candidats/*/logo").permitAll()
 				// Poste isoloir : pas de JWT, il présente sa clé (X-Isoloir-Cle), vérifiée par IsoloirService
 				.requestMatchers(HttpMethod.GET, "/api/booths/*/current-qr").permitAll()
+				// Borne ESP32 : pas de JWT, elle présente sa clé X-Borne-Cle (vérifiée par BorneService)
+				.requestMatchers(HttpMethod.GET, "/api/borne/etat").permitAll()
+				.requestMatchers(HttpMethod.POST, "/api/borne/choix").permitAll()
 				.requestMatchers("/api/auth/changer-mot-de-passe").authenticated()
 				.requestMatchers("/api/admin/**").hasAuthority("SCOPE_ADMIN")
 				.anyRequest().hasAnyAuthority("SCOPE_ADMIN", "SCOPE_ELECTEUR"))
