@@ -58,6 +58,14 @@ function Footer() {
                 Résultats
               </Link>
             </li>
+            <li>
+              <Link
+                to="/depouillement"
+                className="hover:text-brand-teal transition-colors duration-300"
+              >
+                Dépouillement
+              </Link>
+            </li>
           </ul>
         </div>
 
