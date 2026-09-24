@@ -1,0 +1,39 @@
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: vote-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: vote_db
+      POSTGRES_USER: vote_user
+      POSTGRES_PASSWORD: change_me
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  back:
+    build: ./back
+    container_name: vote-back
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/vote_db
+      SPRING_DATASOURCE_USERNAME: vote_user
+      SPRING_DATASOURCE_PASSWORD: change_me
+    ports:
+      - "8080:8080"
+
+  front:
+    build: ./front
+    container_name: vote-front
+    restart: unless-stopped
+    depends_on:
+      - back
+    ports:
+      - "8081:80"
+
+volumes:
+  postgres_data:

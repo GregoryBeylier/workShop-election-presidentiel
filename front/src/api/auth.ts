@@ -44,6 +44,25 @@ export function logout(): void {
   localStorage.removeItem("admin");
 }
 
+export type Role = "ADMIN" | "ELECTEUR";
+
+interface JwtPayload {
+  exp?: number;
+  scope?: string;
+}
+
+/** Lit le contenu (non vérifié) d'un JWT, ou null s'il est illisible. */
+function decodePayload(token: string): JwtPayload | null {
+  try {
+    const payload = token.split(".")[1];
+    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    return JSON.parse(atob(base64)) as JwtPayload;
+  } catch {
+    // Token illisible (ex : ancien "fake-token-123")
+    return null;
+  }
+}
+
 /**
  * Renvoie le JWT stocké s'il est bien formé et pas expiré, sinon null
  * (et nettoie la session). La vraie vérification de la signature reste
@@ -54,17 +73,29 @@ export function getValidToken(): string | null {
   const token = localStorage.getItem("token");
   if (!token) return null;
 
-  try {
-    const payload = token.split(".")[1];
-    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
-    const { exp } = JSON.parse(atob(base64)) as { exp?: number };
-    if (typeof exp === "number" && exp * 1000 > Date.now()) {
-      return token;
-    }
-  } catch {
-    // Token illisible (ex : ancien "fake-token-123")
+  const exp = decodePayload(token)?.exp;
+  if (typeof exp === "number" && exp * 1000 > Date.now()) {
+    return token;
   }
 
   logout();
   return null;
+}
+
+/**
+ * Rôle de l'utilisateur connecté, lu dans le token (claim "scope"),
+ * ou null s'il n'est pas connecté. Sert uniquement à l'affichage :
+ * les droits sont vérifiés par le back à chaque appel.
+ */
+export function getRole(): Role | null {
+  const token = getValidToken();
+  if (!token) return null;
+
+  const scope = decodePayload(token)?.scope;
+  return scope === "ADMIN" || scope === "ELECTEUR" ? scope : null;
+}
+
+/** Page d'arrivée après connexion selon le rôle : /admin pour un admin, / sinon. */
+export function homePath(role: Role | null): string {
+  return role === "ADMIN" ? "/admin" : "/";
 }

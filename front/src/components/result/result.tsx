@@ -1,7 +1,11 @@
 
-import React from "react";
-import { Trophy } from "lucide-react";
+import { Trophy, Clock } from "lucide-react";
 
+// Statut du scrutin, renvoyé par le back plus tard (ex: GET /scrutin/statut).
+// "ouvert"             → le vote n'est pas terminé, pas de résultats à montrer
+// "cloture_en_attente" → le vote est clos mais les résultats ne sont pas encore publiés
+// "publie"             → les résultats peuvent être affichés
+type ScrutinStatus = "ouvert" | "cloture_en_attente" | "publie";
 type Candidate = {
   id: number;
   firstName: string;
@@ -39,6 +43,40 @@ const candidates: Candidate[] = [
 ];
 
 function Result() {
+  // TODO: remplacer par le statut réel renvoyé par l'API une fois le back prêt.
+  // Pour tester les 3 écrans en attendant, change juste cette valeur :
+  // "ouvert" | "cloture_en_attente" | "publie"
+  const scrutinStatus: ScrutinStatus = "publie";
+
+  if (scrutinStatus !== "publie") {
+    return (
+      <main className="min-h-screen bg-[#F5F5F5] flex items-center justify-center px-4">
+        <div className="w-full max-w-md rounded-3xl bg-white p-8 text-center shadow-lg sm:p-10">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-[#2EC7D3]/10">
+            <Clock className="h-8 w-8 text-[#2EC7D3]" />
+          </div>
+
+          <h1 className="text-2xl font-black text-[#3C3C3B] mb-3">
+            {scrutinStatus === "ouvert"
+              ? "Le scrutin est encore ouvert"
+              : "Dépouillement en cours"}
+          </h1>
+
+          <p className="text-sm text-gray-500 mb-6">
+            {scrutinStatus === "ouvert"
+              ? "Les résultats seront visibles une fois le vote terminé. Revenez après la clôture du scrutin."
+              : "Le vote est clos, les résultats sont en cours de vérification et seront publiés très prochainement."}
+          </p>
+
+          <div className="flex items-center justify-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
+            <span className="h-2 w-2 rounded-full bg-[#2EC7D3] animate-pulse" />
+            En attente de publication
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   // =================================================
   // ================= CALCULS =======================
   // =================================================
@@ -83,11 +121,8 @@ function Result() {
         {/* ===================== HEADER ==================== */}
         {/* ================================================= */}
 
-        <header className="mb-8 text-center sm:mb-10">
+        <section className="mb-8 text-center sm:mb-10">
 
-          <p className="mb-2 text-sm font-bold uppercase tracking-[0.2em] text-[#2EC7D3]">
-            Élection présidentielle
-          </p>
 
           <h1 className="text-3xl font-black text-[#3C3C3B] sm:text-5xl">
             Résultats du scrutin
@@ -98,7 +133,7 @@ function Result() {
             scrutin.
           </p>
 
-        </header>
+        </section>
 
         {/* ================================================= */}
         {/* ================= CARD GAGNANT ================== */}
@@ -469,13 +504,7 @@ function Result() {
         {/* ================= FOOTER GLOBAL ================= */}
         {/* ================================================= */}
 
-        <footer className="border-t border-gray-200 pt-6 text-center text-sm text-gray-500">
-
-          <p>
-            Élection présidentielle — Résultats du scrutin
-          </p>
-
-        </footer>
+    
 
       </div>
     </main>
