@@ -28,6 +28,7 @@ function ListeCandidats({
         >
           <Avatar
             texte={initiales(candidat.prenom, candidat.nom)}
+            photo={candidat.photo}
             className="h-12 w-12 bg-gradient-to-br from-brand-teal/15 to-brand-dark/10 font-heading font-bold text-brand-dark"
           />
           <div className="min-w-0 flex-1">

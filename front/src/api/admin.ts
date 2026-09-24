@@ -53,6 +53,7 @@ export interface NouveauCandidat extends NouvelUtilisateur {
   prenom: string;
   nom: string;
   parti: string;
+  photo?: string; // URL facultative
 }
 
 export const getStats = () => apiFetch<Stats>("/admin/stats");

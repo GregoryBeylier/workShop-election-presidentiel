@@ -189,6 +189,10 @@ public class ScrutinAdminService {
 		if (prenom.length() > 100 || nom.length() > 100 || parti.length() > 100) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "100 caractères maximum par champ");
 		}
+		String photo = requete.photo() == null || requete.photo().isBlank() ? null : requete.photo().trim();
+		if (photo != null && photo.length() > 500) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "URL de la photo trop longue (500 caractères maximum)");
+		}
 
 		String email = UtilisateurAdminService.normaliserEmail(requete.email());
 		Utilisateur utilisateur = utilisateurRepository.findByEmail(email).orElse(null);
@@ -222,6 +226,7 @@ public class ScrutinAdminService {
 		candidat.setPrenom(prenom);
 		candidat.setNom(nom);
 		candidat.setParti(parti);
+		candidat.setPhoto(photo);
 		candidatRepository.save(candidat);
 		return new CreationDto<>(versDto(candidat), compteCree);
 	}

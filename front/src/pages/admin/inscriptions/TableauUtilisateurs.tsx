@@ -6,6 +6,9 @@ import type {
   UtilisateurAdmin,
 } from "../../../api/admin";
 import Badge, { type CouleurBadge } from "../../../components/ui/Badge";
+import Pagination from "../../../components/ui/Pagination";
+
+const PAR_PAGE = 15;
 
 const compte: Record<StatutCompte, [string, CouleurBadge]> = {
   ACTIF: ["Actif", "green"],
@@ -30,7 +33,13 @@ function TableauUtilisateurs({
 }) {
   const [recherche, setRecherche] = useState("");
   const filtre = recherche.trim().toLowerCase();
-  const visibles = utilisateurs.filter((u) => u.email.includes(filtre));
+  const trouves = utilisateurs.filter((u) => u.email.includes(filtre));
+
+  // Si la liste raccourcit (recherche, suppression), on reste sur une page existante
+  const [pageDemandee, setPageDemandee] = useState(1);
+  const nbPages = Math.max(1, Math.ceil(trouves.length / PAR_PAGE));
+  const page = Math.min(pageDemandee, nbPages);
+  const visibles = trouves.slice((page - 1) * PAR_PAGE, page * PAR_PAGE);
 
   return (
     <div className="flex flex-col gap-4">
@@ -42,7 +51,10 @@ function TableauUtilisateurs({
         <input
           type="search"
           value={recherche}
-          onChange={(e) => setRecherche(e.target.value)}
+          onChange={(e) => {
+            setRecherche(e.target.value);
+            setPageDemandee(1);
+          }}
           placeholder="Rechercher par email"
           aria-label="Rechercher un utilisateur"
           className="w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"
@@ -115,6 +127,13 @@ function TableauUtilisateurs({
           </p>
         )}
       </div>
+
+      <Pagination
+        page={page}
+        parPage={PAR_PAGE}
+        total={trouves.length}
+        onChange={setPageDemandee}
+      />
     </div>
   );
 }

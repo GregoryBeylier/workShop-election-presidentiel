@@ -12,7 +12,7 @@ function CarteElu({
   elu: ResultatCandidat;
   totalPoints: number;
 }) {
-  const { prenom, nom, parti } = elu.candidat;
+  const { prenom, nom, parti, photo } = elu.candidat;
   const part = pourcentage(elu.points, totalPoints);
 
   return (
@@ -27,11 +27,12 @@ function CarteElu({
       </div>
 
       <div className="flex flex-col items-center gap-6 p-5 sm:gap-8 sm:p-10 md:flex-row">
-        {/* Initiales + médaille (pas de photo en base) */}
+        {/* Photo (ou initiales) + médaille */}
         <div className="relative shrink-0">
           <div className="h-32 w-32 overflow-hidden rounded-full border-8 border-white bg-gray-100 shadow-lg sm:h-48 sm:w-48">
             <Avatar
               texte={initiales(prenom, nom)}
+              photo={photo}
               className="h-full w-full text-4xl font-black text-[#3C3C3B] sm:text-6xl"
             />
           </div>

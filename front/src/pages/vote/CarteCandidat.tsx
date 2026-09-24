@@ -51,11 +51,12 @@ function CarteCandidat({
         </span>
       )}
 
-      {/* Bandeau haut avec avatar */}
-      <div className="h-10 sm:h-28 bg-gradient-to-br from-brand-teal/15 to-brand-dark/10 flex items-center justify-center">
+      {/* Bandeau haut avec photo (ou initiales) */}
+      <div className="h-14 sm:h-32 bg-gradient-to-br from-brand-teal/15 to-brand-dark/10 flex items-center justify-center">
         <Avatar
           texte={initiales(candidat.prenom, candidat.nom)}
-          className="w-7 h-7 sm:w-16 sm:h-16 bg-white border-2 sm:border-4 border-white shadow font-heading font-bold text-brand-dark text-[10px] sm:text-lg"
+          photo={candidat.photo}
+          className="w-11 h-11 sm:w-20 sm:h-20 bg-white border-2 sm:border-4 border-white shadow font-heading font-bold text-brand-dark text-[10px] sm:text-lg"
         />
       </div>
 

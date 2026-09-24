@@ -2,14 +2,23 @@ import { useState, type SubmitEvent } from "react";
 import { UserPlus } from "lucide-react";
 import { ajouterCandidat, creerUtilisateur } from "../../../api/admin";
 import type { EtatScrutin } from "../../../api/election";
+import Avatar from "../../../components/ui/Avatar";
 import Champ from "../../../components/ui/Champ";
+import { initiales } from "../../../utils/format";
 import ChampMotDePasse from "../../../components/ui/ChampMotDePasse";
 import type { IdentifiantsProvisoires } from "./Identifiants";
 import ChoixRole, { type Role } from "./ChoixRole";
 import Bouton from "../../../components/ui/Bouton";
 import Alerte from "../../../components/ui/Alerte";
 
-const vide = { email: "", motDePasse: "", prenom: "", nom: "", parti: "" };
+const vide = {
+  email: "",
+  motDePasse: "",
+  prenom: "",
+  nom: "",
+  parti: "",
+  photo: "",
+};
 
 /**
  * Formulaire unique d'inscription : l'admin choisit si la personne est simple
@@ -106,6 +115,24 @@ function FormulaireInscription({
               aide="Affiché sous le nom du candidat sur la page de vote et dans les résultats."
               {...champ("parti")}
             />
+          </div>
+          <div className="flex items-end gap-3 sm:col-span-2">
+            <Avatar
+              texte={initiales(form.prenom, form.nom)}
+              photo={form.photo.trim()}
+              className="mb-6 h-12 w-12 bg-white font-heading text-sm font-bold text-brand-dark shadow"
+            />
+            <div className="min-w-0 flex-1">
+              <Champ
+                label="Photo (facultatif)"
+                id="insc-photo"
+                type="url"
+                maxLength={500}
+                placeholder="https://…/photo.jpg"
+                aide="Lien vers une image. Sans photo, les initiales sont affichées."
+                {...champ("photo")}
+              />
+            </div>
           </div>
         </div>
       )}
