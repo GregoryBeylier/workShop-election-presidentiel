@@ -103,7 +103,8 @@ s'affiche dans n'importe quel navigateur récent. Chaque écran a sa propre adre
 
 ### Reste à faire
 
-1. **Avant de fusionner dans `main`** : lancer `sql/migration-postgres.sql` sur Neon. Le back vérifie
+1. **Avant de fusionner dans `main`** : lancer `sql/migration-postgres.sql` sur Neon
+   (toutes les requêtes, test et prod, sont détaillées pas à pas dans `sql/guide-neon.sql`). Le back vérifie
    le schéma au démarrage (`ddl-auto=validate`) : sans ces tables, il refusera de démarrer pour toute l'équipe.
    Puis créer les isoloirs (exemple en bas du script).
 2. **Vote en ligne (branche `alex`)** : `ElectionService.voter()` doit prendre le même verrou
