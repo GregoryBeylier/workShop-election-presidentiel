@@ -6,6 +6,7 @@
 -- Vérifier en haut de l'éditeur quelle BRANCHE est sélectionnée avant chaque exécution.
 --
 --   Étape 1  : créer les tables            → branche de test ET prod (une seule fois par base)
+--   Étape 1b : colonnes de la borne ESP32  → branche de test ET prod (une seule fois par base)
 --   Étape 2  : vérifier les tables         → branche de test ET prod
 --   Étape 3  : données de test             → branche de test UNIQUEMENT
 --   Étape 4  : isoloirs réels              → prod (le jour de l'installation)
@@ -62,6 +63,21 @@ COMMIT;
 
 
 -- =============================================================================
+-- ÉTAPE 1b : borne de vote ESP32 (branche de test ET prod, une seule fois)
+-- =============================================================================
+-- Même contenu que migration-borne.sql. À faire AVANT de démarrer une version du back qui gère la borne.
+-- Si Neon répond « column "cle_borne_hash" already exists » : c'est déjà fait.
+
+BEGIN;
+ALTER TABLE isoloir ADD COLUMN cle_borne_hash VARCHAR(64);
+ALTER TABLE isoloir ADD COLUMN derniere_activite_borne TIMESTAMP;
+ALTER TABLE journal_checkin DROP CONSTRAINT chk_resultat_checkin;
+ALTER TABLE journal_checkin ADD CONSTRAINT chk_resultat_checkin CHECK (resultat IN
+	('success', 'already_voted', 'expired_token', 'invalid_token', 'not_registered', 'booth_offline', 'booth_busy'));
+COMMIT;
+
+
+-- =============================================================================
 -- ÉTAPE 2 : vérifier que les tables existent (branche de test ET prod)
 -- =============================================================================
 -- Doit renvoyer 3 lignes : emargement_isoloir, isoloir, journal_checkin
@@ -83,6 +99,12 @@ INSERT INTO isoloir (libelle, cle_hmac, cle_tablette_hash)
 VALUES ('Isoloir test', encode(sha256(gen_random_uuid()::text::bytea), 'hex'),
         encode(sha256('cle-test-isoloir'::bytea), 'hex'))
 RETURNING id_isoloir;
+
+-- 3a bis. (Optionnel) Lui donner une borne, avec la clé "cle-test-borne" (à mettre dans config.h de l'ESP32).
+--     Tant que les routes /api/borne n'existent pas, la borne ne se signale jamais :
+--     le scan répondra « borne hors ligne ». Pour tester le scan sans borne, sauter cette étape.
+UPDATE isoloir SET cle_borne_hash = encode(sha256('cle-test-borne'::bytea), 'hex')
+WHERE id_isoloir = <id_isoloir>;
 
 -- 3b. Trouver la période ouverte : noter l'id_periode de la ligne où statut = true.
 --     S'il n'y en a aucune, ne pas en ouvrir une au hasard (c'est l'admin qui gère les périodes).
@@ -114,11 +136,14 @@ ON CONFLICT DO NOTHING;
 --      La base ne garde que l'empreinte SHA-256 de la clé, jamais la clé elle-même.
 --   3. Ouvrir sur le poste : https://<adresse-de-l-appli>/isoloir/<id_isoloir>?cle=<clé poste>
 --      puis effacer l'historique du navigateur (voir la checklist du README).
---   Ne pas enregistrer la clé poste dans ce fichier ni dans le dépôt.
+--   4. Générer une deuxième clé, pour la borne ESP32 (openssl rand -hex 24), différente de la clé poste.
+--      La recopier dans config.h de la borne (CLE_BORNE), et remplacer <clé borne> ci-dessous.
+--   Ne pas enregistrer les clés dans ce fichier ni dans le dépôt.
 
-INSERT INTO isoloir (libelle, cle_hmac, cle_tablette_hash)
+INSERT INTO isoloir (libelle, cle_hmac, cle_tablette_hash, cle_borne_hash)
 VALUES ('<libellé>', encode(sha256(gen_random_uuid()::text::bytea), 'hex'),
-        encode(sha256('<clé poste>'::bytea), 'hex'))
+        encode(sha256('<clé poste>'::bytea), 'hex'),
+        encode(sha256('<clé borne>'::bytea), 'hex'))
 RETURNING id_isoloir;
 
 -- Poste perdu ou manipulé : le désactiver (ses QR sont refusés immédiatement), puis en créer un nouveau.
@@ -129,8 +154,15 @@ UPDATE isoloir SET actif = FALSE WHERE id_isoloir = <id_isoloir>;
 -- ÉTAPE 5 : requêtes utiles
 -- =============================================================================
 
--- Liste des isoloirs (sans afficher les clés)
-SELECT id_isoloir, libelle, actif FROM isoloir ORDER BY id_isoloir;
+-- Liste des isoloirs (sans afficher les clés), avec l'état de leur borne
+SELECT id_isoloir, libelle, actif, cle_borne_hash IS NOT NULL AS a_une_borne,
+       derniere_activite_borne > (now() AT TIME ZONE 'UTC') - INTERVAL '10 seconds' AS borne_en_ligne
+FROM isoloir ORDER BY id_isoloir;
+
+-- Votes ouverts sur une borne (votant émargé, pas encore de bulletin) : une ligne = une borne occupée
+SELECT i.libelle, e.emarge_le
+FROM emargement_isoloir e JOIN isoloir i USING (id_isoloir)
+WHERE NOT EXISTS (SELECT 1 FROM bulletin b WHERE b.id_inscription = e.id_inscription);
 
 -- Nombre d'émargements par isoloir
 SELECT i.libelle, count(e.id_emargement) AS emargements

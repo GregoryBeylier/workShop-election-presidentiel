@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -176,6 +177,20 @@ class CheckinTests {
 		iso.setCleHmac("5c7b55f6a0ce90fe05a08974ae4b2c20aeecbb75c8325bbde2436958483f5d6a");
 		iso.setCleTabletteHash(IsoloirService.sha256Hex(cleTablette));
 		return isoloirRepository.save(iso);
+	}
+
+	// Donne une borne à l'isoloir, dont le dernier appel date d'il y a `secondes`
+	private void brancherBorne(Isoloir isoloir, long secondes) {
+		isoloir.setCleBorneHash(IsoloirService.sha256Hex("cle-borne-" + isoloir.getLibelle()));
+		isoloir.setDerniereActiviteBorne(LocalDateTime.now(horloge).minusSeconds(secondes));
+		isoloirRepository.save(isoloir);
+	}
+
+	// Ce que fera la borne au dernier duel (route de l'autre équipe) : le bulletin est écrit
+	private void terminerVoteSurBorne(Utilisateur u) {
+		Bulletin bulletin = new Bulletin();
+		bulletin.setInscription(inscriptionRepository.findPeriodeOuverte(id(u)).orElseThrow());
+		bulletinRepository.save(bulletin);
 	}
 
 	private String qr(Isoloir isoloir) {
@@ -476,6 +491,77 @@ class CheckinTests {
 			.filter(r -> r.candidat().id().equals(candidat1.getIdCandidat()))
 			.mapToInt(ResultatCandidatDto::victoires)
 			.sum());
+	}
+
+	@Test
+	void borneEnLigneOuvreLeVote() {
+		brancherBorne(isoloir1, 3);
+
+		assertThat(checkinService.checkin(id(alice), qr(isoloir1)).status()).isEqualTo(ResultatCheckin.success);
+		assertThat(checkinService.statut(id(alice))).isEqualTo(StatutVotant.checked_in_isoloir);
+		assertThat(emargementRepository.existsVoteOuvert(isoloir1.getIdIsoloir())).isTrue();
+	}
+
+	@Test
+	void borneHorsLigneRefuse() {
+		brancherBorne(isoloir1, CheckinService.DELAI_BORNE_EN_LIGNE.toSeconds() + 1);
+		assertThat(checkinService.checkin(id(alice), qr(isoloir1)).status()).isEqualTo(ResultatCheckin.booth_offline);
+
+		// Borne qui n'a jamais appelé le serveur
+		isoloir1.setDerniereActiviteBorne(null);
+		isoloirRepository.save(isoloir1);
+		assertThat(checkinService.checkin(id(alice), qr(isoloir1)).status()).isEqualTo(ResultatCheckin.booth_offline);
+
+		assertThat(emargementRepository.count()).isZero();
+		assertThat(checkinService.statut(id(alice))).isEqualTo(StatutVotant.not_voted);
+	}
+
+	@Test
+	void borneOccupeeJusquAuBulletin() {
+		brancherBorne(isoloir1, 1);
+		checkinService.checkin(id(alice), qr(isoloir1));
+
+		assertThat(checkinService.checkin(id(chloe), qr(isoloir1)).status()).isEqualTo(ResultatCheckin.booth_busy);
+		assertThat(checkinService.statut(id(chloe))).isEqualTo(StatutVotant.not_voted);
+
+		// La borne a fini le vote d'Alice : elle se libère
+		terminerVoteSurBorne(alice);
+		assertThat(checkinService.statut(id(alice))).isEqualTo(StatutVotant.voted_booth);
+		assertThat(checkinService.checkin(id(chloe), qr(isoloir1)).status()).isEqualTo(ResultatCheckin.success);
+	}
+
+	@Test
+	void apresLeVoteSurLaBorneNouveauScanRefuse() {
+		brancherBorne(isoloir1, 1);
+		checkinService.checkin(id(alice), qr(isoloir1));
+		terminerVoteSurBorne(alice);
+
+		assertThat(checkinService.checkin(id(alice), qr(isoloir1)).status()).isEqualTo(ResultatCheckin.already_voted);
+		assertThat(checkinService.checkin(id(alice), qr(isoloir2)).status()).isEqualTo(ResultatCheckin.already_voted);
+		assertThat(checkinService.statut(id(alice))).isEqualTo(StatutVotant.voted_booth);
+	}
+
+	@Test
+	void votantsSimultanesSurLaMemeBorneUnSeulPasse() throws Exception {
+		brancherBorne(isoloir1, 1);
+		String token = qr(isoloir1);
+		List<Callable<ResultatCheckin>> scans = new ArrayList<>();
+		for (int i = 0; i < 10; i++) {
+			Utilisateur votant = utilisateur("votant" + i);
+			inscrire(votant, candidat1.getPeriode());
+			scans.add(() -> checkinService.checkin(id(votant), token).status());
+		}
+
+		ExecutorService executor = Executors.newFixedThreadPool(10);
+		List<ResultatCheckin> resultats = new ArrayList<>();
+		for (Future<ResultatCheckin> f : executor.invokeAll(scans)) {
+			resultats.add(f.get());
+		}
+		executor.shutdown();
+
+		assertThat(resultats).filteredOn(r -> r == ResultatCheckin.success).hasSize(1);
+		assertThat(resultats).filteredOn(r -> r == ResultatCheckin.booth_busy).hasSize(9);
+		assertThat(emargementRepository.count()).isEqualTo(1);
 	}
 
 }

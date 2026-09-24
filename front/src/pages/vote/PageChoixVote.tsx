@@ -1,17 +1,22 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { CheckCircle2, QrCode, Smartphone } from "lucide-react";
+import { QrCode, Smartphone } from "lucide-react";
 import { useStatutVotant } from "../../hooks/useStatutVotant";
 import Alerte from "../../components/ui/Alerte";
 import MessagePage from "../../components/ui/MessagePage";
+import VoteTermine from "./VoteTermine";
 
 /**
  * Point d'entrée de l'onglet "Voter" : l'électeur choisit de voter en ligne
- * (les duels) ou à l'isoloir (scan du QR puis bulletin papier). Le choix est
+ * (les duels) ou à l'isoloir (scan du QR puis vote sur la borne). Le choix est
  * confirmé sur la page suivante ; on ne peut pas faire les deux.
  */
 function PageChoixVote() {
   const { statut, erreur } = useStatutVotant();
+
+  if (statut === "voted_booth") {
+    return <VoteTermine />;
+  }
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-8 sm:py-12">
@@ -55,7 +60,7 @@ function PageChoixVote() {
             description="Comparez les candidats duel après duel, depuis votre téléphone ou votre ordinateur."
             raisonIndisponible={
               statut === "checked_in_isoloir"
-                ? "Vous êtes identifié dans un isoloir : votez sur le bulletin papier."
+                ? "Vous êtes identifié dans un isoloir : votez sur la borne."
                 : undefined
             }
             action={
@@ -71,25 +76,19 @@ function PageChoixVote() {
           <CarteChoix
             icon={QrCode}
             titre="Voter à l'isoloir"
-            description="Dans l'isoloir, scannez le QR code affiché à l'écran, puis votez sur le bulletin papier."
+            description="Dans l'isoloir, scannez le QR code affiché à l'écran, puis votez avec les boutons de la borne."
             raisonIndisponible={
               statut === "voted_app"
                 ? "Vous avez déjà commencé à voter en ligne : le vote à l'isoloir n'est plus possible."
                 : undefined
             }
             action={
-              statut === "checked_in_isoloir" ? (
-                <p className="flex items-center gap-2 font-semibold text-brand-green">
-                  <CheckCircle2 size={20} /> Identification réussie
-                </p>
-              ) : (
-                <Link
-                  to="/vote/isoloir"
-                  className="inline-flex items-center justify-center gap-2 rounded-md border border-brand-dark px-5 py-3 font-medium text-brand-dark transition-colors duration-300 hover:bg-brand-dark hover:text-white"
-                >
-                  Voter à l'isoloir →
-                </Link>
-              )
+              <Link
+                to="/vote/isoloir"
+                className="inline-flex items-center justify-center gap-2 rounded-md border border-brand-dark px-5 py-3 font-medium text-brand-dark transition-colors duration-300 hover:bg-brand-dark hover:text-white"
+              >
+                {statut === "checked_in_isoloir" ? "Suivre mon vote sur la borne →" : "Voter à l'isoloir →"}
+              </Link>
             }
           />
         </div>
