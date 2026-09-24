@@ -44,7 +44,7 @@ export interface ResultatCandidat {
 
 export interface Resultats {
   periode: Periode;
-  classement: ResultatCandidat[]; // trié par points décroissants
+  classement: ResultatCandidat[]; // trié par points décroissants, égalités départagées par les duels directs
 }
 
 export interface Profil {

@@ -39,7 +39,7 @@ function PageResultats() {
     return <MessagePage texte="Aucun candidat pour ce scrutin." />;
   }
 
-  // Déjà trié par points décroissants par le back
+  // Déjà trié par le back : points décroissants, égalités départagées par les duels directs
   const [elu, ...autres] = resultats.classement;
   // Total des points distribués (1 point par duel voté)
   const totalPoints = resultats.classement.reduce((t, r) => t + r.points, 0);

@@ -124,6 +124,72 @@
   }
 }
 
+/**
+ * Carte de l'élu (résultats) : halo qui flotte, reflet qui balaie la carte,
+ * étincelles, confettis en continu.
+ */
+@keyframes halo-flotte {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(30px, -20px) scale(1.15);
+  }
+}
+
+@keyframes reflet-balaie {
+  0%,
+  60% {
+    transform: translateX(-120%) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(320%) skewX(-20deg);
+  }
+}
+
+@keyframes scintille {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.4) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(90deg);
+  }
+}
+
+@keyframes monte {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Chute sur toute la hauteur de la carte (conteneur en container-type: size) */
+@keyframes confetti-tombe {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(0deg);
+  }
+  10%,
+  85% {
+    opacity: 1;
+  }
+  50% {
+    transform: translate(20px, 50cqh) rotate(360deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-10px, calc(100cqh + 2rem)) rotate(720deg);
+  }
+}
+
 @keyframes flash-bg {
   0% {
     opacity: 0;
