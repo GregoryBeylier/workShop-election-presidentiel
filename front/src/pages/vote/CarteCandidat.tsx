@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Check } from "lucide-react";
 import type { Candidat } from "../../api/election";
 import Avatar from "../../components/ui/Avatar";
@@ -6,7 +7,8 @@ import { initiales } from "../../utils/format";
 /**
  * Carte cliquable d'un candidat dans un duel. Elle arrive par la gauche ou
  * la droite, s'entoure de vert une fois choisie, affiche "Victoire !" à la
- * confirmation et s'efface si elle perd ou en cas d'égalité.
+ * confirmation et s'efface si elle perd ou en cas d'égalité. Le logo du
+ * candidat, s'il en a un, sert de fond sous un voile blanc qui garde le texte lisible.
  */
 function CarteCandidat({
   candidat,
@@ -27,6 +29,10 @@ function CarteCandidat({
   desactive: boolean;
   onSelect: () => void;
 }) {
+  // Logo introuvable : on garde le fond par défaut
+  const [logoEnErreur, setLogoEnErreur] = useState<string | null>(null);
+  const afficherLogo = !!candidat.logo && candidat.logo !== logoEnErreur;
+
   return (
     <button
       type="button"
@@ -51,8 +57,22 @@ function CarteCandidat({
         </span>
       )}
 
+      {/* Logo en fond, voilé de blanc */}
+      {afficherLogo && (
+        <>
+          <img
+            src={candidat.logo!}
+            alt=""
+            aria-hidden="true"
+            onError={() => setLogoEnErreur(candidat.logo)}
+            className="absolute inset-0 h-full w-full object-contain p-2 sm:p-4"
+          />
+          <div className="absolute inset-0 bg-white/65" />
+        </>
+      )}
+
       {/* Bandeau haut avec photo (ou initiales) */}
-      <div className="h-14 sm:h-32 bg-gradient-to-br from-brand-teal/15 to-brand-dark/10 flex items-center justify-center">
+      <div className="relative h-14 sm:h-32 bg-gradient-to-br from-brand-teal/15 to-brand-dark/10 flex items-center justify-center">
         <Avatar
           texte={initiales(candidat.prenom, candidat.nom)}
           photo={candidat.photo}
@@ -60,7 +80,7 @@ function CarteCandidat({
         />
       </div>
 
-      <div className="p-2 sm:p-5 text-center">
+      <div className="relative p-2 sm:p-5 text-center">
         <h2 className="font-heading font-bold text-brand-dark uppercase tracking-wide text-xs sm:text-base leading-tight">
           {candidat.prenom} {candidat.nom}
         </h2>

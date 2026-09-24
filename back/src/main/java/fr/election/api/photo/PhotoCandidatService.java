@@ -12,7 +12,10 @@ import org.springframework.web.server.ResponseStatusException;
 
 import fr.election.api.election.dto.CandidatDto;
 import fr.election.api.model.Candidat;
+import fr.election.api.model.CandidatLogo;
 import fr.election.api.model.CandidatPhoto;
+import fr.election.api.model.ImageCandidat;
+import fr.election.api.repository.CandidatLogoRepository;
 import fr.election.api.repository.CandidatPhotoRepository;
 import fr.election.api.repository.CandidatRepository;
 
@@ -24,16 +27,65 @@ public class PhotoCandidatService {
 
 	private final CandidatRepository candidatRepository;
 	private final CandidatPhotoRepository photoRepository;
+	private final CandidatLogoRepository logoRepository;
 
-	public PhotoCandidatService(CandidatRepository candidatRepository, CandidatPhotoRepository photoRepository) {
+	public PhotoCandidatService(CandidatRepository candidatRepository, CandidatPhotoRepository photoRepository,
+			CandidatLogoRepository logoRepository) {
 		this.candidatRepository = candidatRepository;
 		this.photoRepository = photoRepository;
+		this.logoRepository = logoRepository;
 	}
 
 	// Remplace la photo du candidat ; l'URL change à chaque envoi pour contourner le cache navigateur
 	@Transactional
 	public CandidatDto enregistrer(Integer idCandidat, MultipartFile fichier) {
 		Candidat candidat = candidat(idCandidat);
+		CandidatPhoto photo = photoRepository.findById(idCandidat).orElseGet(CandidatPhoto::new);
+		photoRepository.save(remplir(photo, idCandidat, fichier));
+		candidat.setPhoto(url(photo, "photo"));
+		return CandidatDto.de(candidat);
+	}
+
+	@Transactional
+	public CandidatDto supprimer(Integer idCandidat) {
+		Candidat candidat = candidat(idCandidat);
+		photoRepository.deleteById(idCandidat);
+		candidat.setPhoto(null);
+		return CandidatDto.de(candidat);
+	}
+
+	@Transactional(readOnly = true)
+	public CandidatPhoto lire(Integer idCandidat) {
+		return photoRepository.findById(idCandidat)
+			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pas de photo pour ce candidat"));
+	}
+
+	// Même principe pour le logo (PNG transparent conservé par le front)
+	@Transactional
+	public CandidatDto enregistrerLogo(Integer idCandidat, MultipartFile fichier) {
+		Candidat candidat = candidat(idCandidat);
+		CandidatLogo logo = logoRepository.findById(idCandidat).orElseGet(CandidatLogo::new);
+		logoRepository.save(remplir(logo, idCandidat, fichier));
+		candidat.setLogo(url(logo, "logo"));
+		return CandidatDto.de(candidat);
+	}
+
+	@Transactional
+	public CandidatDto supprimerLogo(Integer idCandidat) {
+		Candidat candidat = candidat(idCandidat);
+		logoRepository.deleteById(idCandidat);
+		candidat.setLogo(null);
+		return CandidatDto.de(candidat);
+	}
+
+	@Transactional(readOnly = true)
+	public CandidatLogo lireLogo(Integer idCandidat) {
+		return logoRepository.findById(idCandidat)
+			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pas de logo pour ce candidat"));
+	}
+
+	// Vérifie le fichier reçu et le copie dans l'image
+	private static <T extends ImageCandidat> T remplir(T image, Integer idCandidat, MultipartFile fichier) {
 		if (fichier == null || fichier.isEmpty()) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Aucune image reçue");
 		}
@@ -52,30 +104,16 @@ public class PhotoCandidatService {
 			throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Formats acceptés : JPEG, PNG ou WebP");
 		}
 
-		CandidatPhoto photo = photoRepository.findById(idCandidat).orElseGet(CandidatPhoto::new);
-		photo.setIdCandidat(idCandidat);
-		photo.setContenu(contenu);
-		photo.setTypeMime(typeMime);
-		photo.setMajLe(LocalDateTime.now());
-		photoRepository.save(photo);
-
-		long version = photo.getMajLe().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-		candidat.setPhoto("/api/candidats/" + idCandidat + "/photo?v=" + version);
-		return CandidatDto.de(candidat);
+		image.setIdCandidat(idCandidat);
+		image.setContenu(contenu);
+		image.setTypeMime(typeMime);
+		image.setMajLe(LocalDateTime.now());
+		return image;
 	}
 
-	@Transactional
-	public CandidatDto supprimer(Integer idCandidat) {
-		Candidat candidat = candidat(idCandidat);
-		photoRepository.deleteById(idCandidat);
-		candidat.setPhoto(null);
-		return CandidatDto.de(candidat);
-	}
-
-	@Transactional(readOnly = true)
-	public CandidatPhoto lire(Integer idCandidat) {
-		return photoRepository.findById(idCandidat)
-			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pas de photo pour ce candidat"));
+	private static String url(ImageCandidat image, String sorte) {
+		long version = image.getMajLe().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+		return "/api/candidats/" + image.getIdCandidat() + "/" + sorte + "?v=" + version;
 	}
 
 	private Candidat candidat(Integer idCandidat) {
