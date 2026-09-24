@@ -43,6 +43,10 @@ public class Candidat {
 	@Column(name = "photo", length = 500)
 	private String photo;
 
+	// URL publique du logo (table candidat_logo), null : pas de logo, fond par défaut sur la carte de vote
+	@Column(name = "logo", length = 500)
+	private String logo;
+
 	@Column(name = "inscrit_le", nullable = false)
 	private LocalDate inscritLe = LocalDate.now();
 
@@ -59,6 +63,8 @@ public class Candidat {
 	public void setParti(String parti) { this.parti = parti; }
 	public String getPhoto() { return photo; }
 	public void setPhoto(String photo) { this.photo = photo; }
+	public String getLogo() { return logo; }
+	public void setLogo(String logo) { this.logo = logo; }
 	public LocalDate getInscritLe() { return inscritLe; }
 
 }

@@ -1,12 +1,13 @@
 import { useRef, useState, type DragEvent, type ReactNode } from "react";
 import { Camera, Loader2, X } from "lucide-react";
 import Avatar from "./Avatar";
-import { preparerPhoto } from "../../utils/image";
+import { preparerLogo, preparerPhoto } from "../../utils/image";
 
 /**
  * Photo ronde modifiable : glisser-déposer une image dessus, ou cliquer pour
- * choisir un fichier. L'image est redimensionnée (preparerPhoto) avant d'être
- * passée à `onPhoto`. Avec `children`, tout le bloc (pointillés) accepte le dépôt.
+ * choisir un fichier. L'image est redimensionnée (preparerPhoto, ou preparerLogo
+ * avec `logo`) avant d'être passée à `onPhoto`. Avec `children`, tout le bloc
+ * (pointillés) accepte le dépôt.
  */
 function DepotPhoto({
   texte,
@@ -16,15 +17,17 @@ function DepotPhoto({
   onPhoto,
   onSupprimer,
   onErreur,
+  logo = false,
   children,
 }: {
   texte: string; // initiales si pas de photo
   photo: string | null;
-  libelle: string; // "photo de Claire Fontaine", pour les lecteurs d'écran
+  libelle: string; // "la photo de Claire Fontaine", pour les lecteurs d'écran
   className: string; // taille et couleurs de l'avatar
   onPhoto: (photo: Blob) => Promise<void> | void;
   onSupprimer?: () => Promise<void> | void;
   onErreur: (message: string) => void;
+  logo?: boolean; // PNG non recadré (transparence conservée)
   children?: ReactNode;
 }) {
   const input = useRef<HTMLInputElement>(null);
@@ -43,7 +46,10 @@ function DepotPhoto({
   };
 
   const traiter = (fichier: File | undefined) => {
-    if (fichier) executer(async () => onPhoto(await preparerPhoto(fichier)));
+    if (fichier)
+      executer(async () =>
+        onPhoto(await (logo ? preparerLogo : preparerPhoto)(fichier)),
+      );
   };
 
   const glisser = {
@@ -82,12 +88,17 @@ function DepotPhoto({
           onClick={() => input.current?.click()}
           disabled={enCours}
           title="Glissez une image ici ou cliquez pour en choisir une"
-          aria-label={`${photo ? "Changer la" : "Ajouter une"} ${libelle}`}
+          aria-label={`${photo ? "Changer" : "Ajouter"} ${libelle}`}
           className={`group relative block rounded-full transition-shadow duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal focus-visible:ring-offset-2 ${
             survol ? "ring-4 ring-brand-teal ring-offset-2" : ""
           }`}
         >
-          <Avatar texte={texte} photo={photo} className={className} />
+          <Avatar
+            texte={texte}
+            photo={photo}
+            entier={logo}
+            className={className}
+          />
           <span
             className={`absolute inset-0 flex items-center justify-center rounded-full bg-brand-dark/55 text-white transition-opacity duration-300 ${
               enCours || survol
@@ -101,7 +112,7 @@ function DepotPhoto({
               <Camera size={18} />
             )}
           </span>
-          {/* Toujours visible : indique sur mobile (sans survol) que la photo se change */}
+          {/* Toujours visible : indique sur mobile (sans survol) que l'image se change */}
           <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-brand-teal text-white shadow ring-2 ring-white">
             <Camera size={11} strokeWidth={2.5} />
           </span>
@@ -111,8 +122,8 @@ function DepotPhoto({
           <button
             type="button"
             onClick={() => executer(onSupprimer)}
-            title="Retirer la photo"
-            aria-label={`Retirer la ${libelle}`}
+            title="Retirer"
+            aria-label={`Retirer ${libelle}`}
             className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-white text-gray-500 shadow ring-1 ring-gray-200 transition-colors duration-300 hover:text-brand-pink"
           >
             <X size={11} strokeWidth={2.5} />

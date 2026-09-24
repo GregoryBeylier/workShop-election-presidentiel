@@ -120,5 +120,20 @@ export const supprimerPhotoCandidat = (idCandidat: number) =>
     method: "DELETE",
   });
 
+/** Remplace le logo du candidat (image déjà redimensionnée, voir preparerLogo). */
+export const envoyerLogoCandidat = (idCandidat: number, logo: Blob) => {
+  const donnees = new FormData();
+  donnees.append("logo", logo, "logo.png");
+  return apiFetch<Candidat>(`/admin/candidats/${idCandidat}/logo`, {
+    method: "PUT",
+    body: donnees,
+  });
+};
+
+export const supprimerLogoCandidat = (idCandidat: number) =>
+  apiFetch<Candidat>(`/admin/candidats/${idCandidat}/logo`, {
+    method: "DELETE",
+  });
+
 export const retirerCandidat = (idCandidat: number) =>
   apiFetch<void>(`/admin/candidats/${idCandidat}`, { method: "DELETE" });

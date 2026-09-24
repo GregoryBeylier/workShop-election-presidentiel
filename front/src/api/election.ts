@@ -6,6 +6,7 @@ export interface Candidat {
   nom: string;
   parti: string;
   photo: string | null; // URL servie par le back, null : on affiche les initiales
+  logo: string | null; // URL servie par le back, null : fond par défaut sur la carte de vote
 }
 
 export type EtatScrutin = "PREPARATION" | "OUVERT" | "CLOS";
