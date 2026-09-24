@@ -43,7 +43,7 @@ public class Candidat {
 	@Column(name = "photo", length = 500)
 	private String photo;
 
-	// URL publique du logo (table candidat_logo), null : pas de logo, fond par défaut sur la carte de vote
+	// URL publique du logo (colonnes logo_*, voir CandidatLogo), null : pas de logo, fond par défaut sur la carte de vote
 	@Column(name = "logo", length = 500)
 	private String logo;
 
