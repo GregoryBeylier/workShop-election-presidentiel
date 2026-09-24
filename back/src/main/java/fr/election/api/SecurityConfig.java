@@ -47,6 +47,8 @@ public class SecurityConfig {
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 				.requestMatchers("/api/health", "/api/auth/login", "/error").permitAll()
+				// Poste isoloir : pas de JWT, il présente sa clé (X-Isoloir-Cle), vérifiée par IsoloirService
+				.requestMatchers(HttpMethod.GET, "/api/booths/*/current-qr").permitAll()
 				.requestMatchers("/api/admin/**").hasAuthority("SCOPE_ADMIN")
 				.anyRequest().authenticated())
 			.oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
@@ -81,7 +83,7 @@ public class SecurityConfig {
 		CorsConfiguration config = new CorsConfiguration();
 		config.setAllowedOrigins(allowedOrigins);
 		config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-		config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+		config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Isoloir-Cle"));
 
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/api/**", config);

@@ -7,6 +7,7 @@ import {
   UserRound,
   ChevronDown,
   LogOut,
+  QrCode,
 } from "lucide-react";
 import { getRole, logout } from "../../api/auth";
 import logo from "../../assets/mydigitalschool-logo.png";
@@ -18,6 +19,7 @@ function Navbar() {
   const links = [
     { to: "/", label: "Accueil", icon: Home },
     { to: "/vote", label: "Voter", icon: Vote },
+    { to: "/checkin", label: "Isoloir", icon: QrCode },
     { to: "/resultats", label: "Résultats", icon: BarChart3 },
   ];
 

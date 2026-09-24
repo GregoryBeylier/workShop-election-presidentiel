@@ -1,7 +1,11 @@
 # Check-in QR isoloir — prototype
 
+> **Le check-in est maintenant intégré dans l'appli** (`back/` et `front/`), avec le vrai login JWT :
+> voir [Intégration dans l'appli](#intégration-dans-lappli). Ce dossier garde la spec, le script SQL
+> et le prototype autonome (sans login), utile pour une démo rapide.
+
 Implémentation autonome de [spec-checkin-qr-isoloir.md](spec-checkin-qr-isoloir.md), sur la même stack
-que l'appli (Spring Boot 4 + React/Vite/Tailwind) pour être intégrée ensuite dans `back/` et `front/`.
+que l'appli (Spring Boot 4 + React/Vite/Tailwind).
 
 ```
 qr-code/
@@ -81,11 +85,29 @@ s'affiche dans n'importe quel navigateur récent. Chaque écran a sa propre adre
 - [ ] **Historique du navigateur effacé** après la première ouverture (l'URL contenait la clé).
 - [ ] Poste perdu ou manipulé : changer sa clé (`cle_tablette_hash`) et sa clé de signature (`cle_hmac`).
 
-## À faire lors de l'intégration dans l'appli
+## Intégration dans l'appli
 
-1. Remplacer `X-User-Id` (`VotantCourant.java`, `api.ts`) par l'utilisateur du JWT.
-2. Lancer `sql/migration-postgres.sql` sur Neon et créer les isoloirs (exemple en bas du script).
-3. **Le futur endpoint de vote en ligne doit prendre le même verrou**
+| Prototype (`qr-code/`) | Appli |
+|---|---|
+| `back/.../service`, `web` | `back/src/main/java/fr/election/api/checkin/` |
+| `back/.../model`, `repository` | `back/.../api/model/` et `repository/` (`Isoloir`, `EmargementIsoloir`, `JournalCheckin`) |
+| `front/src/pages/Isoloir.tsx` | `front/src/components/Isoloir/` → route publique `/isoloir/:id` |
+| `front/src/pages/Votant.tsx` | `front/src/components/Checkin/` → route connectée `/checkin` (lien « Isoloir » de la navbar) |
+| header `X-User-Id` | **JWT** : le votant est `sub` du jeton, le back ignore toute autre identité |
+
+- `SecurityConfig` : `GET /api/booths/*/current-qr` est public (le poste présente sa clé),
+  tout le reste du check-in exige un JWT valide.
+- Tests : `cd back && ./mvnw test` tourne sur H2 (`src/test/resources/application.properties`), sans Neon.
+- Tester le scan sur téléphone : `cd front && npm run dev:https` (HTTPS + accessible depuis le Wi-Fi).
+  `npm run dev` reste inchangé pour le reste de l'équipe.
+
+### Reste à faire
+
+1. **Avant de fusionner dans `main`** : lancer `sql/migration-postgres.sql` sur Neon. Le back vérifie
+   le schéma au démarrage (`ddl-auto=validate`) : sans ces tables, il refusera de démarrer pour toute l'équipe.
+   Puis créer les isoloirs (exemple en bas du script).
+2. **Vote en ligne (branche `alex`)** : `ElectionService.voter()` doit prendre le même verrou
    (`InscriptionRepository.findPeriodeOuverteForUpdate`) et refuser le vote s'il existe un
-   `emargement_isoloir`. Sinon, un vote appli et un check-in simultanés pourraient passer tous les deux.
-4. Autoriser `/api/booths/**` sans JWT dans `SecurityConfig` (la tablette s'authentifie avec sa clé).
+   `emargement_isoloir`. Sans ça, un votant émargé à l'isoloir peut encore voter en ligne.
+3. **Déploiement** : nginx doit servir le front en HTTPS et relayer `/api` vers le back
+   (`front/nginx.conf` ne fait ni l'un ni l'autre aujourd'hui).

@@ -11,6 +11,8 @@ import Waiting from "./components/Waiting/Waiting";
 import AdminHome from "./components/AdminHome/AdminHome";
 import MyAccount from "./components/MyAccount/MyAccount";
 import Vote from "./components/Vote/Vote";
+import Checkin from "./components/Checkin/Checkin";
+import Isoloir from "./components/Isoloir/Isoloir";
 
 function App() {
   return (
@@ -19,6 +21,8 @@ function App() {
         {/* Pages publiques, sans navbar/footer */}
         <Route path="/login" element={<Login />} />
         <Route path="/set-password" element={<SetPassword />} />
+        {/* Écran du poste isoloir : plein écran, authentifié par la clé de l'isoloir (pas de compte) */}
+        <Route path="/isoloir/:id" element={<Isoloir />} />
 
         {/* Toutes les autres pages exigent d'être connecté */}
         <Route element={<ProtectedRoute />}>
@@ -28,6 +32,7 @@ function App() {
             <Route path="/waiting" element={<Waiting />} />
             <Route path="/mon-compte" element={<MyAccount />} />
             <Route path="/vote" element={<Vote />} />
+            <Route path="/checkin" element={<Checkin />} />
 
             {/* Pages réservées aux admins (électeur => renvoyé à l'accueil) */}
             <Route element={<ProtectedRoute role="ADMIN" />}>
