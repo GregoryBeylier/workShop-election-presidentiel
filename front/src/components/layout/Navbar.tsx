@@ -84,7 +84,10 @@ function Navbar() {
         {/* Navigation principale */}
         <div className="flex items-center gap-1 bg-gray-50 rounded-full p-1">
           {links.map((link) => {
-            const isActive = location.pathname === link.to;
+            // Sous-pages incluses : "Voter" reste actif sur /vote/en-ligne et /vote/isoloir
+            const isActive =
+              location.pathname === link.to ||
+              (link.to !== "/" && location.pathname.startsWith(`${link.to}/`));
             const Icon = link.icon;
             return (
               <Link

@@ -6,11 +6,14 @@ import RouteProtegee from "./components/layout/RouteProtegee";
 import PageConnexion from "./pages/connexion/PageConnexion";
 import PageChangerMotDePasse from "./pages/changer-mot-de-passe/PageChangerMotDePasse";
 import PageAccueil from "./pages/accueil/PageAccueil";
-import PageVote from "./pages/vote/PageVote";
 import PageAttente from "./pages/attente/PageAttente";
 import PageResultats from "./pages/resultats/PageResultats";
 import PageMonCompte from "./pages/mon-compte/PageMonCompte";
 import PageAdmin from "./pages/admin/PageAdmin";
+import PageChoixVote from "./pages/vote/PageChoixVote";
+import PageVoteEnLigne from "./pages/vote/PageVoteEnLigne";
+import PageVoteIsoloir from "./pages/vote/PageVoteIsoloir";
+import PageIsoloir from "./pages/isoloir/PageIsoloir";
 import PageMentionsLegales from "./pages/mentions-legales/PageMentionsLegales";
 import PageProtectionDonnees from "./pages/protection-donnees/PageProtectionDonnees";
 
@@ -24,6 +27,8 @@ function App() {
           path="/changer-mot-de-passe"
           element={<PageChangerMotDePasse />}
         />
+        {/* Écran du poste isoloir : plein écran, authentifié par la clé de l'isoloir (pas de compte) */}
+        <Route path="/isoloir/:id" element={<PageIsoloir />} />
 
         {/* Toutes les autres pages exigent d'être connecté */}
         <Route element={<RouteProtegee />}>
@@ -32,7 +37,10 @@ function App() {
             <Route path="/resultats" element={<PageResultats />} />
             <Route path="/waiting" element={<PageAttente />} />
             <Route path="/mon-compte" element={<PageMonCompte />} />
-            <Route path="/vote" element={<PageVote />} />
+            {/* Vote : choix du mode (en ligne ou isoloir), confirmation, puis la page correspondante */}
+            <Route path="/vote" element={<PageChoixVote />} />
+            <Route path="/vote/en-ligne" element={<PageVoteEnLigne />} />
+            <Route path="/vote/isoloir" element={<PageVoteIsoloir />} />
             <Route
               path="/mentions-legales"
               element={<PageMentionsLegales />}
