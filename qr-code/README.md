@@ -69,23 +69,29 @@ Les refus métier sont renvoyés en HTTP 200 ; `401` si le votant ou la tablette
 
 ## Installation d'un poste isoloir
 
-Le poste isoloir peut être une tablette ou un PC branché sur un écran : la page `/isoloir/:id`
-s'affiche dans n'importe quel navigateur récent. Chaque écran a sa propre adresse
-(`/isoloir/1`, `/isoloir/2`…) et sa propre clé.
+Un isoloir = **un écran** (tablette ou PC branché sur un écran) qui affiche le QR, et **une borne ESP32** où le votant
+vote avec les boutons (voir [borne/API.md](../borne/API.md)). La page `/isoloir/:id` s'affiche dans n'importe quel
+navigateur récent. Chaque isoloir a sa propre adresse (`/isoloir/1`, `/isoloir/2`…), une clé pour l'écran et une autre
+pour la borne.
 
 - [ ] **Le serveur (back + front) tourne sur une machine du staff**, jamais sur le poste isoloir :
       sinon, un accès au poste donnerait accès à la base et à toutes les clés.
-- [ ] **Seul l'écran est dans l'isoloir.** Pas de clavier ni de souris à portée : avec un clavier,
+- [ ] **Seuls l'écran et la borne sont dans l'isoloir.** Pas de clavier ni de souris à portée : avec un clavier,
       on peut sortir du plein écran et lire la clé de l'isoloir (F12). Tablette : fixée, en mode kiosque.
+- [ ] **Borne fermée, câble USB hors de portée** : brancher un PC sur la borne permet de lire sa clé dans le firmware.
 - [ ] **Mode kiosque** (plein écran sans barre d'adresse) :
       `chrome.exe --kiosk "https://<ip-serveur>:5173/isoloir/1?cle=<clé>"` (Windows) ou
       `open -a "Google Chrome" --args --kiosk "https://<ip-serveur>:5173/isoloir/1?cle=<clé>"` (Mac).
 - [ ] **Mise en veille et économiseur d'écran désactivés.**
 - [ ] **Certificat accepté** une fois sur le poste avant le scrutin (tant qu'il est auto-signé).
 - [ ] **Zoom du navigateur à 100 %** et pas de reflet sur l'écran.
-- [ ] **Scan testé avec un vrai téléphone** sur chaque poste avant l'ouverture, puis indicateur « Connecté » vérifié.
+- [ ] **Parcours complet testé avant le jour J** (scan, duels sur la borne, « Merci ») sur une branche Neon de test.
+      Sur la prod, pas de vrai vote de test : il consommerait un droit de vote et laisserait la borne occupée.
+- [ ] **Le jour J** : indicateur « Connecté » sur l'écran, et borne en ligne (LED éteintes, requête de l'étape 5 de `sql/guide-neon.sql`).
+- [ ] **Wi-Fi de l'événement en 2,4 GHz**, protégé par mot de passe : l'ESP32 ne voit pas le 5 GHz et envoie sa clé en HTTP.
 - [ ] **Historique du navigateur effacé** après la première ouverture (l'URL contenait la clé).
-- [ ] Poste perdu ou manipulé : changer sa clé (`cle_tablette_hash`) et sa clé de signature (`cle_hmac`).
+- [ ] Poste perdu ou manipulé : désactiver l'isoloir (`actif = FALSE`) et en créer un nouveau, avec de nouvelles clés
+      pour l'écran et la borne (reflasher la borne).
 
 ## Intégration dans l'appli
 
@@ -113,3 +119,8 @@ s'affiche dans n'importe quel navigateur récent. Chaque écran a sa propre adre
 3. **Déploiement** : nginx doit servir le front en HTTPS et relayer `/api` vers le back
    (`front/nginx.conf` ne fait ni l'un ni l'autre aujourd'hui). Côté CORS, mettre la vraie adresse de l'appli
    dans `app.cors.allowed-origins`, ou retirer l'en-tête `Origin` dans nginx comme le fait `npm run dev:https`.
+4. **Borne ESP32** : ~~le scan ouvre le vote sur la borne de l'isoloir~~ : **fait** (refus `booth_offline` /
+   `booth_busy`, statut `voted_booth`, page « Votez sur la borne » puis « Merci », testé avec un faux bulletin SQL).
+   Reste : lancer `sql/migration-borne.sql` (étape 1b du guide) sur la prod, les routes `/api/borne/etat` et
+   `/api/borne/choix` (autre équipe), le firmware (Léo), puis un test de bout en bout avec la vraie borne.
+   Contrat : [borne/API.md](../borne/API.md).
