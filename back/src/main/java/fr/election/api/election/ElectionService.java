@@ -1,7 +1,9 @@
 package fr.election.api.election;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -172,18 +174,34 @@ public class ElectionService {
 				s1.egalite();
 				s2.egalite();
 			} else if (ligne.getCandidatChoisi().getIdCandidat().equals(s1.candidat.id())) {
-				s1.victoire();
+				s1.victoire(s2);
 				s2.defaite();
 			} else {
-				s2.victoire();
+				s2.victoire(s1);
 				s1.defaite();
 			}
 		}
 
-		return scores.values().stream()
-			.map(Score::versDto)
-			.sorted(Comparator.comparing(ResultatCandidatDto::points).reversed())
-			.toList();
+		List<Score> tries = new ArrayList<>(scores.values());
+		tries.sort(Comparator.comparing((Score s) -> s.points).reversed());
+
+		// À points égaux, on départage par les duels directs : passe devant celui qui a été
+		// choisi le plus souvent face aux autres candidats à égalité
+		List<ResultatCandidatDto> classement = new ArrayList<>();
+		int debut = 0;
+		while (debut < tries.size()) {
+			int fin = debut + 1;
+			while (fin < tries.size() && tries.get(fin).points.compareTo(tries.get(debut).points) == 0) {
+				fin++;
+			}
+			List<Score> exAequo = tries.subList(debut, fin);
+			exAequo.stream()
+				.sorted(Comparator.comparingInt((Score s) -> s.victoiresContre(exAequo)).reversed())
+				.map(Score::versDto)
+				.forEach(classement::add);
+			debut = fin;
+		}
+		return classement;
 	}
 
 	public PeriodeVote periodeEnCours() {
@@ -206,14 +224,23 @@ public class ElectionService {
 		private int victoires;
 		private int egalites;
 		private int defaites;
+		// Nombre de duels gagnés contre chaque adversaire (id candidat -> victoires)
+		private final Map<Integer, Integer> victoiresParAdversaire = new HashMap<>();
 
 		Score(CandidatDto candidat) {
 			this.candidat = candidat;
 		}
 
-		void victoire() {
+		void victoire(Score adversaire) {
 			points = points.add(POINTS_VICTOIRE);
 			victoires++;
+			victoiresParAdversaire.merge(adversaire.candidat.id(), 1, Integer::sum);
+		}
+
+		int victoiresContre(List<Score> adversaires) {
+			return adversaires.stream()
+				.mapToInt(a -> victoiresParAdversaire.getOrDefault(a.candidat.id(), 0))
+				.sum();
 		}
 
 		void egalite() {
