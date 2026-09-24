@@ -3,6 +3,8 @@
 > **Le check-in est maintenant intégré dans l'appli** (`back/` et `front/`), avec le vrai login JWT :
 > voir [Intégration dans l'appli](#intégration-dans-lappli). Ce dossier garde la spec, le script SQL
 > et le prototype autonome (sans login), utile pour une démo rapide.
+>
+> 🔒 **Sécurité** : comment le système empêche de truquer le vote, et les failles qui restent : [SECURITE.md](SECURITE.md).
 
 Implémentation autonome de [spec-checkin-qr-isoloir.md](spec-checkin-qr-isoloir.md), sur la même stack
 que l'appli (Spring Boot 4 + React/Vite/Tailwind).
