@@ -125,19 +125,9 @@
 }
 
 /**
- * Carte de l'élu (résultats) : dégradé qui coule, halos qui flottent,
- * reflet qui balaie la carte, étincelles.
+ * Carte de l'élu (résultats) : halo qui flotte, reflet qui balaie la carte,
+ * étincelles, confettis en continu.
  */
-@keyframes degrade-coule {
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-}
-
 @keyframes halo-flotte {
   0%,
   100% {
@@ -178,6 +168,25 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Chute sur toute la hauteur de la carte (conteneur en container-type: size) */
+@keyframes confetti-tombe {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(0deg);
+  }
+  10%,
+  85% {
+    opacity: 1;
+  }
+  50% {
+    transform: translate(20px, 50cqh) rotate(360deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-10px, calc(100cqh + 2rem)) rotate(720deg);
   }
 }
 
