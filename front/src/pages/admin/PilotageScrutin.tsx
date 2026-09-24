@@ -227,7 +227,11 @@ function PilotageScrutin({
 
       {message && (
         <div className="mt-4">
-          <Alerte message={message} onClose={() => setMessage(null)} />
+          <Alerte
+            message={message}
+            onClose={() => setMessage(null)}
+            surFondSombre
+          />
         </div>
       )}
 

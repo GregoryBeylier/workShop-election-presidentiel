@@ -8,7 +8,8 @@ import Footer from "./Footer";
  */
 function Layout() {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    // Sur mobile, marge basse pour la barre de navigation fixe (h-16 + zone du geste)
+    <div className="min-h-screen bg-gray-50 flex flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
       <Navbar />
       <main className="flex-1">
         <Outlet />
