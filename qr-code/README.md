@@ -91,8 +91,8 @@ s'affiche dans n'importe quel navigateur récent. Chaque écran a sa propre adre
 |---|---|
 | `back/.../service`, `web` | `back/src/main/java/fr/election/api/checkin/` |
 | `back/.../model`, `repository` | `back/.../api/model/` et `repository/` (`Isoloir`, `EmargementIsoloir`, `JournalCheckin`) |
-| `front/src/pages/Isoloir.tsx` | `front/src/components/Isoloir/` → route publique `/isoloir/:id` |
-| `front/src/pages/Votant.tsx` | `front/src/components/Checkin/` → route connectée `/checkin` (lien « Isoloir » de la navbar) |
+| `front/src/pages/Isoloir.tsx` | `front/src/pages/isoloir/PageIsoloir.tsx` → route publique `/isoloir/:id` |
+| `front/src/pages/Votant.tsx` | `front/src/pages/vote/` → `/vote` (choix du mode), `/vote/en-ligne` (confirmation puis duels), `/vote/isoloir` (scan) |
 | header `X-User-Id` | **JWT** : le votant est `sub` du jeton, le back ignore toute autre identité |
 
 - `SecurityConfig` : `GET /api/booths/*/current-qr` est public (le poste présente sa clé),
@@ -106,8 +106,8 @@ s'affiche dans n'importe quel navigateur récent. Chaque écran a sa propre adre
 1. ~~Lancer `sql/migration-postgres.sql` sur la base Neon de prod~~ : **fait le 24/09/2026**.
    Reste à créer les vrais isoloirs le jour de l'installation : voir le README à la racine du dépôt
    et l'étape 4 de `sql/guide-neon.sql`.
-2. **Vote en ligne (branche `alex`)** : `ElectionService.voter()` doit prendre le même verrou
-   (`InscriptionRepository.findPeriodeOuverteForUpdate`) et refuser le vote s'il existe un
-   `emargement_isoloir`. Sans ça, un votant émargé à l'isoloir peut encore voter en ligne.
+2. ~~Vote en ligne : `ElectionService.voter()` doit refuser le vote après un check-in~~ : **fait**
+   (même verrou que le check-in, refus en 409, testé dans `CheckinTests`).
 3. **Déploiement** : nginx doit servir le front en HTTPS et relayer `/api` vers le back
-   (`front/nginx.conf` ne fait ni l'un ni l'autre aujourd'hui).
+   (`front/nginx.conf` ne fait ni l'un ni l'autre aujourd'hui). Côté CORS, mettre la vraie adresse de l'appli
+   dans `app.cors.allowed-origins`, ou retirer l'en-tête `Origin` dans nginx comme le fait `npm run dev:https`.
