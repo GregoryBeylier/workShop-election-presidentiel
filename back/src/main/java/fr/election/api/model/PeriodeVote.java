@@ -28,6 +28,18 @@ public class PeriodeVote {
 	@Column(name = "clos_le")
 	private LocalDate closLe;
 
+	// Pas de colonne "état" : statut = ouvert ; fermé sans date d'ouverture = en préparation ; sinon clos
+	public static final String PREPARATION = "PREPARATION";
+	public static final String OUVERT = "OUVERT";
+	public static final String CLOS = "CLOS";
+
+	public String getEtat() {
+		if (statut) {
+			return OUVERT;
+		}
+		return ouvertLe == null ? PREPARATION : CLOS;
+	}
+
 	public Integer getIdPeriode() { return idPeriode; }
 	public boolean isStatut() { return statut; }
 	public void setStatut(boolean statut) { this.statut = statut; }

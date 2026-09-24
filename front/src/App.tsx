@@ -1,37 +1,40 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Layout from "./components/Layout/Layout";
 
-import Login from "./components/Login/Login";
-import SetPassword from "./components/SetPassword/SetPassword";
+import Layout from "./components/layout/Layout";
+import RouteProtegee from "./components/layout/RouteProtegee";
 
-import ElectorHome from "./components/ElectorHome/ElectorHome";
-import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
-import Result from "./components/result/result";
-import Waiting from "./components/Waiting/Waiting";
-import AdminHome from "./components/AdminHome/AdminHome";
-import MyAccount from "./components/MyAccount/MyAccount";
-import Vote from "./components/Vote/Vote";
+import PageConnexion from "./pages/connexion/PageConnexion";
+import PageChangerMotDePasse from "./pages/changer-mot-de-passe/PageChangerMotDePasse";
+import PageAccueil from "./pages/accueil/PageAccueil";
+import PageVote from "./pages/vote/PageVote";
+import PageAttente from "./pages/attente/PageAttente";
+import PageResultats from "./pages/resultats/PageResultats";
+import PageMonCompte from "./pages/mon-compte/PageMonCompte";
+import PageAdmin from "./pages/admin/PageAdmin";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         {/* Pages publiques, sans navbar/footer */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/set-password" element={<SetPassword />} />
+        <Route path="/login" element={<PageConnexion />} />
+        <Route
+          path="/changer-mot-de-passe"
+          element={<PageChangerMotDePasse />}
+        />
 
         {/* Toutes les autres pages exigent d'être connecté */}
-        <Route element={<ProtectedRoute />}>
+        <Route element={<RouteProtegee />}>
           <Route element={<Layout />}>
-            <Route path="/" element={<ElectorHome />} />
-            <Route path="/resultats" element={<Result />} />
-            <Route path="/waiting" element={<Waiting />} />
-            <Route path="/mon-compte" element={<MyAccount />} />
-            <Route path="/vote" element={<Vote />} />
+            <Route path="/" element={<PageAccueil />} />
+            <Route path="/resultats" element={<PageResultats />} />
+            <Route path="/waiting" element={<PageAttente />} />
+            <Route path="/mon-compte" element={<PageMonCompte />} />
+            <Route path="/vote" element={<PageVote />} />
 
             {/* Pages réservées aux admins (électeur => renvoyé à l'accueil) */}
-            <Route element={<ProtectedRoute role="ADMIN" />}>
-              <Route path="/admin" element={<AdminHome />} />
+            <Route element={<RouteProtegee role="ADMIN" />}>
+              <Route path="/admin" element={<PageAdmin />} />
             </Route>
           </Route>
         </Route>

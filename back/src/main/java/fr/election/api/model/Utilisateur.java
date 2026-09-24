@@ -25,8 +25,14 @@ public class Utilisateur {
 	@Column(name = "mot_de_passe", nullable = false)
 	private String motDePasse;
 
-	@Column(name = "matricule", nullable = false, unique = true, length = 50)
+	// Ancien identifiant école, plus utilisé (l'email suffit) : colonne facultative,
+	// gardée pour que l'anonymisation RGPD efface les valeurs existantes
+	@Column(name = "matricule", unique = true, length = 50)
 	private String matricule;
+
+	// true tant que l'utilisateur n'a pas remplacé le mot de passe provisoire fixé par l'admin
+	@Column(name = "mdp_provisoire", nullable = false)
+	private boolean motDePasseProvisoire = false;
 
 	@Column(name = "cree_le", nullable = false)
 	private LocalDate creeLe = LocalDate.now();
@@ -38,6 +44,8 @@ public class Utilisateur {
 	public void setMotDePasse(String motDePasse) { this.motDePasse = motDePasse; }
 	public String getMatricule() { return matricule; }
 	public void setMatricule(String matricule) { this.matricule = matricule; }
+	public boolean isMotDePasseProvisoire() { return motDePasseProvisoire; }
+	public void setMotDePasseProvisoire(boolean motDePasseProvisoire) { this.motDePasseProvisoire = motDePasseProvisoire; }
 	public LocalDate getCreeLe() { return creeLe; }
 
 }

@@ -27,6 +27,31 @@
 }
 
 /**
+ * Curseurs : Tailwind v4 ne met plus de main sur les boutons par défaut.
+ * Tout élément cliquable affiche la main, et le curseur "interdit" quand il
+ * est désactivé : inutile d'ajouter cursor-pointer composant par composant.
+ */
+@layer base {
+  button,
+  [role="button"],
+  [role="tab"],
+  [role="switch"],
+  summary,
+  select,
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="file"],
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+  }
+
+  :disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+}
+
+/**
  * Petites animations "écran de combat" pour la page de vote (duel).
  */
 @keyframes slide-in-left {

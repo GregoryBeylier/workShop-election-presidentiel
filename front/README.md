@@ -5,10 +5,9 @@ de vote en ligne basée sur la méthode **"tout le monde contre tout le
 monde"** (chaque candidat affronte chaque autre candidat une seule fois,
 sous forme de duels successifs) plutôt qu'un vote à candidat unique.
 
-Ce dépôt contient la partie **front-end**. Le back-end (API, authentification
-réelle, base de données) est développé séparément par une autre partie de
-l'équipe et n'est pas encore branché — le front fonctionne pour l'instant
-avec des données simulées (voir [Données mockées](#données-mockées-et-todo)).
+Ce dossier contient la partie **front-end**. Il appelle l'API Spring Boot du
+dossier `back/` : en dev, Vite redirige les appels `/api/...` vers
+`http://localhost:8080` (voir `vite.config.ts`).
 
 ## Stack technique
 
@@ -47,47 +46,58 @@ MyDigitalSchool 25-26, déclarées comme tokens Tailwind dans `src/index.css` :
 - Police des titres : **Bricolage Grotesque** (chargée depuis Google Fonts) — police officielle de la charte
 - Police du texte courant : **Arial** (police système recommandée par la charte, en remplacement de DIN OT qui n'est pas libre de droits)
 
-## Pages et fonctionnement
+## Pages
 
-| Route | Composant | Description |
+| Route | Page | Description |
 |---|---|---|
-| `/login` | `Login` | Connexion électeur (email + mot de passe) |
-| `/set-password` | `SetPassword` | Création du mot de passe via le lien reçu par email (pas d'auto-inscription : les comptes sont créés côté admin) |
-| `/` | `ElectorHome` | Accueil électeur — progression du vote, explication du fonctionnement |
-| `/vote` | `Vote` | Écran de duel : les candidats s'affrontent deux par deux, sélection + confirmation du choix |
-| `/resultats` | `Result` | Page des résultats du scrutin |
-| `/mon-compte` | `MyAccount` | Informations du compte, sécurité, notifications, déconnexion |
+| `/login` | `PageConnexion` | Connexion (email + mot de passe) |
+| `/changer-mot-de-passe` | `PageChangerMotDePasse` | Première connexion : remplacer le mot de passe provisoire fixé par l'admin |
+| `/` | `PageAccueil` | Accueil électeur : progression du vote, fonctionnement |
+| `/vote` | `PageVote` | Duels : les candidats s'affrontent deux par deux |
+| `/waiting` | `PageAttente` | Pendant le vote : compte à rebours et participation (résultats verrouillés) |
+| `/resultats` | `PageResultats` | Résultats, une fois le scrutin clos |
+| `/mon-compte` | `PageMonCompte` | Informations du compte, statut du vote, déconnexion |
+| `/admin` | `PageAdmin` | Admin : pilotage du scrutin, statistiques en direct, inscriptions, candidats |
 
-Structure des dossiers :
+## Organisation du code
 
 ```
 src/
-├── components/       # un dossier par page/composant
-│   ├── Navbar/, Footer/, Layout/   → structure commune à toutes les pages (sauf Login/SetPassword)
-│   ├── ProtectedRoute/             → redirige vers /login si non connecté
-│   └── ...
-├── data/
-│   └── mockData.ts    # données simulées (candidats, électeurs)
-├── assets/            # logo, images
-└── App.tsx            # déclaration des routes
+├── App.tsx              # déclaration des routes
+├── api/                 # appels au back, un fichier par domaine
+│   ├── client.ts        #   fetch commun (JWT, erreurs, 401 => /login)
+│   ├── auth.ts          #   connexion, session, changement de mot de passe
+│   ├── election.ts      #   scrutin, vote, résultats (côté électeur)
+│   └── admin.ts         #   statistiques, scrutin, utilisateurs, candidats
+├── hooks/               # hooks React réutilisables (usePolling)
+├── utils/               # fonctions pures : formatage, règles de mot de passe
+├── components/          # composants réutilisables, sans appel à l'API
+│   ├── layout/          #   Layout, Navbar, Footer, RouteProtegee
+│   └── ui/              #   Bouton, Champ, Badge, Avatar, Panneau, Bandeau,
+│                        #   BarreProgression, Confirmation, Onglets…
+└── pages/               # une page = un dossier, avec ses propres composants
+    ├── connexion/
+    ├── changer-mot-de-passe/
+    ├── accueil/         #   PageAccueil + CarteProgression, CommentCaMarche…
+    ├── vote/            #   PageVote + CarteCandidat, ProgressionDuels…
+    ├── attente/         #   PageAttente + CompteARebours, ParticipationEnCours
+    ├── resultats/       #   PageResultats + CarteElu, ClassementAutres…
+    ├── mon-compte/
+    └── admin/           #   PageAdmin + PilotageScrutin
+        ├── tableau-de-bord/
+        ├── inscriptions/
+        └── candidats/
 ```
 
-## Données mockées et TODO
+Règles pour s'y retrouver :
 
-Le back-end n'étant pas encore branché, le front utilise des données
-simulées dans `src/data/mockData.ts` (4 candidats, 5 électeurs) et un faux
-système d'authentification : la connexion stocke un token factice
-(`fake-token-123`) dans le `localStorage`, vérifié par `ProtectedRoute` pour
-autoriser l'accès aux pages internes.
-
-Les endroits à brancher au vrai back sont marqués `// TODO` dans le code,
-notamment :
-
-- `Login.tsx` / `SetPassword.tsx` — appel API réel au lieu du faux token
-- `Vote.tsx` — envoi du vote (duel + candidat choisi) à l'API, comportement
-  exact d'un duel "passé"
-- `MyAccount.tsx` — sauvegarde des informations du profil
-- `ElectorHome.tsx` — récupération de la vraie progression de l'électeur
+- **Une page** (`PageXxx`) charge ses données via `api/` et assemble ses
+  composants ; ses morceaux propres vivent dans le même dossier.
+- **Un composant utilisé par plusieurs pages** va dans `components/ui/` (ou
+  `components/layout/` s'il fait partie de la structure commune). Il reçoit
+  tout par ses props et n'appelle jamais l'API.
+- **Une fonction sans JSX** (calcul, formatage) va dans `utils/`.
+- Les noms sont en français, comme le domaine (scrutin, candidat, duel…).
 
 ## Scripts disponibles
 
