@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { CheckCircle2, CircleAlert, QrCode, Smartphone, TriangleAlert, WifiOff } from "lucide-react";
+import { CheckCircle2, CircleAlert, QrCode, Smartphone, WifiOff } from "lucide-react";
 import { useVoterStatus } from "./useVoterStatus";
 
 /**
@@ -21,7 +21,8 @@ function VoteChoice() {
           Comment souhaitez-vous voter ?
         </h1>
         <p className="text-sm text-gray-500 mt-2 max-w-xl mx-auto">
-          Vous votez une seule fois : en ligne ou à l'isoloir, pas les deux.
+          Vous votez une seule fois : en ligne ou à l'isoloir, pas les deux. Votre choix sera
+          définitif une fois confirmé à l'étape suivante.
         </p>
       </div>
 
@@ -59,7 +60,7 @@ function VoteChoice() {
                 to="/vote/en-ligne"
                 className="bg-brand-teal-dark text-white rounded-md px-5 py-3 font-medium hover:bg-brand-teal transition-colors duration-300 inline-flex items-center justify-center gap-2"
               >
-                {status === "voted_app" ? "Continuer mes duels →" : "Commencer →"}
+                {status === "voted_app" ? "Continuer mes duels →" : "Voter en ligne →"}
               </Link>
             }
           />
@@ -73,11 +74,6 @@ function VoteChoice() {
                 ? "Vous avez déjà commencé à voter en ligne : le vote à l'isoloir n'est plus possible."
                 : undefined
             }
-            warning={
-              status === "not_voted"
-                ? "Le scan vous fait renoncer définitivement au vote en ligne, même si vous ne déposez pas de bulletin."
-                : undefined
-            }
             action={
               status === "checked_in_isoloir" ? (
                 <p className="flex items-center gap-2 text-brand-green font-semibold">
@@ -88,7 +84,7 @@ function VoteChoice() {
                   to="/vote/isoloir"
                   className="border border-brand-dark text-brand-dark rounded-md px-5 py-3 font-medium hover:bg-brand-dark hover:text-white transition-colors duration-300 inline-flex items-center justify-center gap-2"
                 >
-                  Scanner le QR →
+                  Voter à l'isoloir →
                 </Link>
               )
             }
@@ -105,14 +101,12 @@ function ChoiceCard({
   icon: Icon,
   title,
   description,
-  warning,
   disabledReason,
   action,
 }: {
   icon: Icon;
   title: string;
   description: string;
-  warning?: string;
   disabledReason?: string;
   action: ReactNode;
 }) {
@@ -130,12 +124,6 @@ function ChoiceCard({
         <h2 className="font-heading text-xl font-bold text-brand-dark">{title}</h2>
         <p className="text-gray-600">{description}</p>
       </div>
-      {warning && (
-        <p className="flex gap-2 items-start text-sm text-gray-600 bg-gray-50 rounded-md p-3">
-          <TriangleAlert size={18} className="shrink-0 text-brand-pink mt-0.5" />
-          {warning}
-        </p>
-      )}
       <div className="mt-auto pt-2">
         {disabled ? <p className="text-sm text-gray-600">{disabledReason}</p> : action}
       </div>

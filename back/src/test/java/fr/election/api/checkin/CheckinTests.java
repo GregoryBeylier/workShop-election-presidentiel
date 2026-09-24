@@ -30,6 +30,7 @@ import org.springframework.web.context.WebApplicationContext;
 
 import fr.election.api.auth.JwtService;
 import fr.election.api.checkin.CheckinService.ResultatCheckin;
+import fr.election.api.checkin.CheckinService.ResultatVoteEnLigne;
 import fr.election.api.checkin.CheckinService.StatutVotant;
 import fr.election.api.model.Bulletin;
 import fr.election.api.model.Inscription;
@@ -286,6 +287,72 @@ class CheckinTests {
 		// Le JWT de chloe ne donne accès qu'au statut de chloe
 		mvc.perform(get("/api/voter/me/status").header("Authorization", bearer(chloe)))
 			.andExpect(jsonPath("$.status").value("not_voted"));
+	}
+
+	@Test
+	void commencerEnLigneBloqueLIsoloir() {
+		assertThat(checkinService.commencerVoteEnLigne(id(alice)).status()).isEqualTo(ResultatVoteEnLigne.success);
+
+		assertThat(checkinService.statut(id(alice))).isEqualTo(StatutVotant.voted_app);
+		assertThat(checkinService.checkin(id(alice), qr(isoloir1)).status()).isEqualTo(ResultatCheckin.already_voted);
+		assertThat(emargementRepository.count()).isZero();
+	}
+
+	@Test
+	void commencerEnLigneDeuxFoisIdempotent() {
+		long bulletinsAvant = bulletinRepository.count();
+
+		assertThat(checkinService.commencerVoteEnLigne(id(alice)).status()).isEqualTo(ResultatVoteEnLigne.success);
+		assertThat(checkinService.commencerVoteEnLigne(id(alice)).status()).isEqualTo(ResultatVoteEnLigne.success);
+		assertThat(bulletinRepository.count()).isEqualTo(bulletinsAvant + 1);
+	}
+
+	@Test
+	void isoloirBloqueLeVoteEnLigne() {
+		long bulletinsAvant = bulletinRepository.count();
+		checkinService.checkin(id(alice), qr(isoloir1));
+
+		assertThat(checkinService.commencerVoteEnLigne(id(alice)).status()).isEqualTo(ResultatVoteEnLigne.checked_in_isoloir);
+		assertThat(bulletinRepository.count()).isEqualTo(bulletinsAvant);
+		assertThat(checkinService.statut(id(alice))).isEqualTo(StatutVotant.checked_in_isoloir);
+	}
+
+	@Test
+	void commencerEnLigneNonInscritRefuse() {
+		assertThat(checkinService.commencerVoteEnLigne(id(david)).status()).isEqualTo(ResultatVoteEnLigne.not_registered);
+	}
+
+	@Test
+	void clicEnLigneEtScanSimultanesUnSeulGagne() throws Exception {
+		long bulletinsAvant = bulletinRepository.count();
+		String token = qr(isoloir1);
+		List<Callable<Object>> actions = new ArrayList<>();
+		for (int i = 0; i < 10; i++) {
+			actions.add(i % 2 == 0
+					? () -> checkinService.checkin(id(chloe), token).status()
+					: () -> checkinService.commencerVoteEnLigne(id(chloe)).status());
+		}
+
+		ExecutorService executor = Executors.newFixedThreadPool(10);
+		for (Future<Object> f : executor.invokeAll(actions)) {
+			f.get();
+		}
+		executor.shutdown();
+
+		// Soit émargée à l'isoloir, soit bulletin en ligne : jamais les deux
+		long emargements = emargementRepository.count();
+		long bulletinsChloe = bulletinRepository.count() - bulletinsAvant;
+		assertThat(emargements + bulletinsChloe).isEqualTo(1);
+	}
+
+	@Test
+	void commencerEnLigneExigeUnJwt() throws Exception {
+		mvc.perform(post("/api/voter/me/online-vote")).andExpect(status().isUnauthorized());
+		mvc.perform(post("/api/voter/me/online-vote").header("Authorization", bearer(alice)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("success"));
+		mvc.perform(get("/api/voter/me/status").header("Authorization", bearer(alice)))
+			.andExpect(jsonPath("$.status").value("voted_app"));
 	}
 
 }

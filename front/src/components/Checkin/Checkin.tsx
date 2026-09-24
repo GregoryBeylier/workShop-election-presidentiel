@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { CheckCircle2, CircleAlert, QrCode, WifiOff } from "lucide-react";
+import { CheckCircle2, CircleAlert, QrCode, TriangleAlert, WifiOff } from "lucide-react";
 import { logout } from "../../api/auth";
 import {
   checkin,
@@ -80,6 +80,16 @@ function Checkin() {
       <div className="bg-white rounded-xl shadow p-6 w-full max-w-md flex flex-col gap-4 h-fit">
         <h1 className="text-2xl font-heading font-bold text-brand-dark">Voter à l'isoloir</h1>
 
+        {status === "not_voted" && (
+          <div className="flex gap-3 items-start rounded-lg border border-brand-pink bg-brand-pink/10 p-4 text-brand-dark" role="note">
+            <TriangleAlert size={22} className="shrink-0 text-brand-pink" />
+            <p>
+              En scannant le QR de l'isoloir, vous renoncez <b>définitivement</b> au vote en ligne,
+              même si vous ne déposez pas de bulletin.
+            </p>
+          </div>
+        )}
+
         {feedback && <FeedbackBanner feedback={feedback} />}
 
         {feedback?.tone === "network" && !scanning && (
@@ -117,9 +127,8 @@ function Checkin() {
               >
                 <QrCode size={20} /> Scanner le QR de l'isoloir
               </button>
-              <p className="text-xs text-gray-500">
-                En scannant le QR de l'isoloir, vous renoncez définitivement au vote en ligne,
-                même si vous ne déposez pas de bulletin.
+              <p className="text-sm text-gray-600">
+                Scannez le QR code affiché sur l'écran de l'isoloir, puis votez sur le bulletin papier.
               </p>
             </div>
           ))}

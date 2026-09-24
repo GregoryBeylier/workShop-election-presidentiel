@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import fr.election.api.model.Bulletin;
 import fr.election.api.model.EmargementIsoloir;
 import fr.election.api.model.Inscription;
 import fr.election.api.model.Isoloir;
@@ -32,6 +33,11 @@ public class CheckinService {
 	public enum ResultatCheckin { success, already_voted, expired_token, invalid_token, not_registered }
 
 	public record Reponse(ResultatCheckin status, String message) {}
+
+	// Résultat du choix "voter en ligne"
+	public enum ResultatVoteEnLigne { success, checked_in_isoloir, not_registered }
+
+	public record ReponseVoteEnLigne(ResultatVoteEnLigne status, String message) {}
 
 	private final QrTokenService qrTokenService;
 	private final InscriptionRepository inscriptionRepository;
@@ -107,6 +113,36 @@ public class CheckinService {
 
 		return journaliser(idUtilisateur, idIsoloir, maintenant, ResultatCheckin.success,
 				"Identification réussie — vous pouvez voter dans l'isoloir.");
+	}
+
+	/**
+	 * Le votant choisit de voter en ligne : son bulletin est créé tout de suite (encore vide),
+	 * ce qui ferme définitivement le vote à l'isoloir, même s'il ne va pas au bout de ses duels.
+	 * Même verrou que le check-in : un clic sur "Commencer" et un scan simultanés ne passent pas tous les deux.
+	 */
+	@Transactional
+	public ReponseVoteEnLigne commencerVoteEnLigne(Integer idUtilisateur) {
+		Optional<Inscription> inscription = inscriptionRepository.findPeriodeOuverteForUpdate(idUtilisateur);
+		if (inscription.isEmpty()) {
+			return new ReponseVoteEnLigne(ResultatVoteEnLigne.not_registered,
+					"Vous n'êtes pas inscrit à l'élection en cours.");
+		}
+		Integer idInscription = inscription.get().getIdInscription();
+
+		if (emargementRepository.findByInscription_IdInscription(idInscription).isPresent()) {
+			log.warn("Vote en ligne refusé : votant {} déjà identifié dans un isoloir", idUtilisateur);
+			return new ReponseVoteEnLigne(ResultatVoteEnLigne.checked_in_isoloir,
+					"Vous êtes déjà identifié dans un isoloir : votez sur le bulletin papier.");
+		}
+
+		// Déjà commencé (double clic, retour arrière) : on confirme sans rien changer
+		if (!bulletinRepository.existsByInscriptionIdInscription(idInscription)) {
+			Bulletin bulletin = new Bulletin();
+			bulletin.setInscription(inscription.get());
+			bulletinRepository.save(bulletin);
+			log.info("Vote en ligne commencé : votant {}", idUtilisateur);
+		}
+		return new ReponseVoteEnLigne(ResultatVoteEnLigne.success, "Vous pouvez voter en ligne.");
 	}
 
 	// Utilisé par l'appli pour savoir si elle propose encore le vote en ligne

@@ -71,6 +71,19 @@ export function checkin(qrToken: string) {
   });
 }
 
+export interface OnlineVoteResponse {
+  status: "success" | "checked_in_isoloir" | "not_registered";
+  message: string;
+}
+
+// Le votant choisit le vote en ligne : ferme définitivement le vote à l'isoloir
+export function startOnlineVote() {
+  return request<OnlineVoteResponse>("/api/voter/me/online-vote", {
+    method: "POST",
+    headers: authHeaders(),
+  });
+}
+
 // Poste isoloir : pas de JWT, il présente la clé de l'isoloir
 export function fetchCurrentQr(boothId: string, boothKey: string) {
   return request<CurrentQr>(`/api/booths/${boothId}/current-qr`, {

@@ -149,6 +149,17 @@ DELETE FROM emargement_isoloir WHERE id_inscription IN (
 	SELECT i.id_inscription FROM inscription i JOIN utilisateur u USING (id_utilisateur)
 	WHERE u.email = 'test@mydigitalschool.fr');
 
+-- Même chose après un clic sur « Commencer » (vote en ligne) (BRANCHE DE TEST UNIQUEMENT) :
+-- supprime son bulletin en ligne et ses choix de duels, pour qu'il puisse à nouveau choisir son mode de vote
+BEGIN;
+DELETE FROM ligne_vote WHERE id_bulletin IN (
+	SELECT b.id_bulletin FROM bulletin b JOIN inscription i USING (id_inscription) JOIN utilisateur u USING (id_utilisateur)
+	WHERE u.email = 'test@mydigitalschool.fr');
+DELETE FROM bulletin WHERE id_inscription IN (
+	SELECT i.id_inscription FROM inscription i JOIN utilisateur u USING (id_utilisateur)
+	WHERE u.email = 'test@mydigitalschool.fr');
+COMMIT;
+
 
 -- =============================================================================
 -- ANNEXE : tout supprimer (BRANCHE DE TEST UNIQUEMENT)

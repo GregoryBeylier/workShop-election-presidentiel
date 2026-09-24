@@ -6,6 +6,7 @@ import { fetchVoterStatus, HttpError, type VoterStatus } from "../../api/checkin
 /**
  * Statut de vote de l'électeur connecté (en ligne / isoloir).
  * `error` passe à true si le serveur est injoignable ; token expiré => retour à la connexion.
+ * `setStatus` permet de refléter tout de suite une action qui vient de réussir.
  */
 export function useVoterStatus() {
   const navigate = useNavigate();
@@ -32,5 +33,5 @@ export function useVoterStatus() {
     };
   }, [navigate]);
 
-  return { status, error };
+  return { status, error, setStatus };
 }

@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import fr.election.api.checkin.CheckinService.Reponse;
+import fr.election.api.checkin.CheckinService.ReponseVoteEnLigne;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 
@@ -34,6 +35,12 @@ public class CheckinController {
 	@PostMapping("/checkin")
 	public Reponse checkin(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CheckinRequest request) {
 		return checkinService.checkin(Integer.valueOf(jwt.getSubject()), request.qrToken());
+	}
+
+	// Le votant choisit le vote en ligne : ferme définitivement le vote à l'isoloir
+	@PostMapping("/voter/me/online-vote")
+	public ReponseVoteEnLigne commencerVoteEnLigne(@AuthenticationPrincipal Jwt jwt) {
+		return checkinService.commencerVoteEnLigne(Integer.valueOf(jwt.getSubject()));
 	}
 
 	@GetMapping("/voter/me/status")
