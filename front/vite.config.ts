@@ -15,7 +15,15 @@ export default defineConfig(({ mode }) => {
       host: https,
       // En dev, les appels /api/... sont redirigés vers le back Spring Boot
       proxy: {
-        "/api": "http://localhost:8080",
+        "/api": {
+          target: "http://localhost:8080",
+          // En https, l'origine (https://localhost:5173 ou https://<ip>:5173) n'est pas dans la liste
+          // CORS du back, qui renverrait 403. Pour le navigateur, front et API sont à la même adresse
+          // (le proxy) : on retire donc l'en-tête Origin. Sans risque CSRF, l'appli utilise un JWT en header.
+          configure: (proxy) => {
+            if (https) proxy.on("proxyReq", (proxyReq) => proxyReq.removeHeader("origin"));
+          },
+        },
       },
     },
   };
