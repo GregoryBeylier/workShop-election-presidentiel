@@ -42,6 +42,7 @@ function FormulaireInscription({
     onChange: (e: { target: { value: string } }) =>
       setForm((f) => ({ ...f, [cle]: e.target.value })),
   });
+  
 
   const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();

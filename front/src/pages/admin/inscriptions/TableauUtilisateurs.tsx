@@ -25,7 +25,9 @@ function TableauUtilisateurs({
 }) {
   const [recherche, setRecherche] = useState("");
   const filtre = recherche.trim().toLowerCase();
-  const visibles = utilisateurs.filter((u) => u.email.includes(filtre));
+  const visibles = utilisateurs.filter((u) =>
+    u.email.toLowerCase().includes(filtre),
+  );
 
   return (
     <div className="flex flex-col gap-4">
