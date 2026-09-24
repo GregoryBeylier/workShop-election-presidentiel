@@ -1,0 +1,7 @@
+# Mot de passe Wi-Fi de la borne
+firmware/*/config.h
+
+# Fausse base du serveur de test (regeneree au demarrage)
+serveur-test/fausse_bdd.json
+serveur-test/fausse_bdd.json.tmp
+serveur-test/__pycache__/
