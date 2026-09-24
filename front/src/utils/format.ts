@@ -1,10 +1,8 @@
 import type { Periode } from "../api/election";
 
-/**
- * Fin du scrutin : clos_le est une date, le scrutin se termine à la fin de ce jour-là.
- */
+/** Fin du scrutin : clos_le est une date-heure "YYYY-MM-DDTHH:mm:ss" (heure locale). */
 export function dateCloture(periode: Periode): Date | null {
-  return periode.closLe ? new Date(`${periode.closLe}T23:59:59`) : null;
+  return periode.closLe ? new Date(periode.closLe) : null;
 }
 
 /** "12 avril" */
@@ -15,6 +13,19 @@ export function formatJour(date: Date): string {
 /** "12 avril" à partir d'une date "YYYY-MM-DD" de l'API ("—" si absente). */
 export function formatJourIso(iso: string | null): string {
   return iso ? formatJour(new Date(`${iso}T00:00:00`)) : "—";
+}
+
+/** "12 avril à 18h30" */
+export function formatJourHeure(date: Date): string {
+  const heure = date
+    .toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+    .replace(":", "h");
+  return `${formatJour(date)} à ${heure}`;
+}
+
+/** "12 avril à 18h30" à partir d'une date-heure ISO de l'API ("—" si absente). */
+export function formatJourHeureIso(iso: string | null): string {
+  return iso ? formatJourHeure(new Date(iso)) : "—";
 }
 
 /** Nombre de points au format français (0,5 pour une égalité). */

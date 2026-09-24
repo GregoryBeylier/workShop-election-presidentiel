@@ -57,7 +57,7 @@ export interface NouveauCandidat extends NouvelUtilisateur {
 
 export const getStats = () => apiFetch<Stats>("/admin/stats");
 
-/** closLe : "YYYY-MM-DD", date de clôture prévue affichée aux électeurs. */
+/** closLe : "YYYY-MM-DDTHH:mm", date et heure de clôture prévue affichée aux électeurs. */
 export const ouvrirScrutin = (closLe: string) =>
   apiFetch<Periode>("/admin/scrutin/ouvrir", {
     method: "POST",

@@ -1,6 +1,7 @@
 package fr.election.api.model;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -26,7 +27,7 @@ public class PeriodeVote {
 	private LocalDate ouvertLe;
 
 	@Column(name = "clos_le")
-	private LocalDate closLe;
+	private LocalDateTime closLe;
 
 	// Pas de colonne "état" : statut = ouvert ; fermé sans date d'ouverture = en préparation ; sinon clos
 	public static final String PREPARATION = "PREPARATION";
@@ -45,7 +46,7 @@ public class PeriodeVote {
 	public void setStatut(boolean statut) { this.statut = statut; }
 	public LocalDate getOuvertLe() { return ouvertLe; }
 	public void setOuvertLe(LocalDate ouvertLe) { this.ouvertLe = ouvertLe; }
-	public LocalDate getClosLe() { return closLe; }
-	public void setClosLe(LocalDate closLe) { this.closLe = closLe; }
+	public LocalDateTime getClosLe() { return closLe; }
+	public void setClosLe(LocalDateTime closLe) { this.closLe = closLe; }
 
 }

@@ -1,14 +1,25 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Play, Square, Plus, BarChart3 } from "lucide-react";
+import {
+  Play,
+  Square,
+  Plus,
+  BarChart3,
+  Hourglass,
+  AlertCircle,
+} from "lucide-react";
 import {
   cloturerScrutin,
   nouveauScrutin,
   ouvrirScrutin,
 } from "../../api/admin";
 import type { Periode } from "../../api/election";
-import { formatJourIso as jour } from "../../utils/format";
+import {
+  formatJourHeureIso as jourHeure,
+  formatJourIso as jour,
+} from "../../utils/format";
 import Bouton from "../../components/ui/Bouton";
+import ChampDateHeure from "../../components/ui/ChampDateHeure";
 import Confirmation from "../../components/ui/Confirmation";
 import Alerte, { type Message } from "../../components/ui/Alerte";
 
@@ -23,11 +34,27 @@ const libelles = {
 
 type Action = "ouvrir" | "cloturer" | "nouveau";
 
-// "YYYY-MM-DD" dans `jours` jours, pour le champ date
-function dansJours(jours: number): string {
+// "YYYY-MM-DDTHH:mm" (heure locale) dans `jours` jours, pour le champ datetime-local
+function dansJours(jours: number, heure?: string): string {
   const date = new Date();
   date.setDate(date.getDate() + jours);
-  return date.toLocaleDateString("sv-SE");
+  const [jourIso, heureIso] = date.toLocaleString("sv-SE").split(" ");
+  return `${jourIso}T${heure ?? heureIso.slice(0, 5)}`;
+}
+
+// Raccourcis de durée du vote (l'heure choisie est conservée)
+const raccourcis = [
+  { label: "Demain", jours: 1 },
+  { label: "1 semaine", jours: 7 },
+  { label: "2 semaines", jours: 14 },
+];
+
+// "dans 3 h", "dans 7 jours"
+function delai(cloture: Date): string {
+  const heures = Math.round((cloture.getTime() - Date.now()) / 3_600_000);
+  if (heures < 1) return "dans moins d'une heure";
+  if (heures < 48) return `dans ${heures} h`;
+  return `dans ${Math.round(heures / 24)} jours`;
 }
 
 /**
@@ -43,7 +70,7 @@ function PilotageScrutin({
   nbCandidats: number;
   onChange: () => void;
 }) {
-  const [closLe, setClosLe] = useState(() => dansJours(7));
+  const [closLe, setClosLe] = useState(() => dansJours(7, "18:00"));
   const [action, setAction] = useState<Action | null>(null);
   const [message, setMessage] = useState<Message | null>(null);
 
@@ -70,6 +97,9 @@ function PilotageScrutin({
   };
 
   const etat = periode?.etat;
+  const [jourClos, heureClos] = closLe.split("T");
+  const cloture = new Date(closLe);
+  const clotureValide = !!jourClos && !!heureClos && cloture > new Date();
 
   return (
     <div className="rounded-2xl bg-white/10 p-5 text-white backdrop-blur sm:p-6">
@@ -95,38 +125,82 @@ function PilotageScrutin({
         {etat === "PREPARATION" &&
           `${nbCandidats} candidat${nbCandidats > 1 ? "s" : ""} inscrit${nbCandidats > 1 ? "s" : ""}. Il en faut au moins 2 pour démarrer.`}
         {etat === "OUVERT" &&
-          `Ouvert depuis le ${jour(periode!.ouvertLe)} · clôture prévue le ${jour(periode!.closLe)}.`}
+          `Ouvert depuis le ${jour(periode!.ouvertLe)} · clôture prévue le ${jourHeure(periode!.closLe)}.`}
         {etat === "CLOS" &&
-          `Vote du ${jour(periode!.ouvertLe)} au ${jour(periode!.closLe)}. Les résultats sont publics.`}
+          `Vote du ${jour(periode!.ouvertLe)} au ${jourHeure(periode!.closLe)}. Les résultats sont publics.`}
       </p>
 
       <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end">
         {etat === "PREPARATION" && (
-          <>
-            <div className="flex flex-col gap-1">
-              <label
-                htmlFor="clos-le"
-                className="text-xs font-medium text-white/70"
-              >
-                Clôture prévue le
-              </label>
-              <input
-                id="clos-le"
-                type="date"
-                value={closLe}
-                min={dansJours(0)}
-                onChange={(e) => setClosLe(e.target.value)}
-                className="rounded-md border border-white/30 bg-white px-3 py-2 text-sm text-brand-dark focus:outline-none focus:ring-2 focus:ring-brand-teal"
-              />
+          <div className="flex w-full flex-col gap-3">
+            <ChampDateHeure
+              id="clos-le"
+              label="Clôture prévue le"
+              value={closLe}
+              min={dansJours(0)}
+              onChange={setClosLe}
+            />
+
+            <div className="flex flex-wrap gap-2">
+              {raccourcis.map(({ label, jours }) => {
+                const valeur = dansJours(jours, heureClos || "18:00");
+                const actif = valeur === closLe;
+                return (
+                  <button
+                    key={jours}
+                    type="button"
+                    aria-pressed={actif}
+                    onClick={() => setClosLe(valeur)}
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors duration-300 ${
+                      actif
+                        ? "border-brand-teal bg-brand-teal text-white"
+                        : "border-white/25 text-white/80 hover:border-white/50 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
+
+            <p
+              aria-live="polite"
+              className="flex items-start gap-2 text-xs leading-5 text-white/70"
+            >
+              {clotureValide ? (
+                <>
+                  <Hourglass
+                    size={14}
+                    className="mt-0.5 shrink-0 text-brand-teal-light"
+                  />
+                  <span>
+                    Vote ouvert jusqu'au{" "}
+                    <strong className="font-semibold text-white">
+                      {jourHeure(closLe)}
+                    </strong>
+                    , {delai(cloture)}.
+                  </span>
+                </>
+              ) : (
+                <>
+                  <AlertCircle
+                    size={14}
+                    className="mt-0.5 shrink-0 text-brand-pink"
+                  />
+                  <span>Choisissez une date et une heure à venir.</span>
+                </>
+              )}
+            </p>
+
             <Bouton
               onClick={() => setAction("ouvrir")}
-              disabled={nbCandidats < 2 || !closLe}
+              disabled={nbCandidats < 2 || !clotureValide}
+              className="w-full sm:w-auto sm:self-start"
             >
               <Play size={16} />
               Démarrer le vote
             </Bouton>
-          </>
+          </div>
         )}
         {etat === "OUVERT" && (
           <Bouton variante="danger" onClick={() => setAction("cloturer")}>
@@ -166,7 +240,7 @@ function PilotageScrutin({
         >
           Les {(nbCandidats * (nbCandidats - 1)) / 2} duels vont être générés
           entre les {nbCandidats} candidats et le vote sera ouvert jusqu'au{" "}
-          {jour(closLe)}. Les candidats ne pourront plus être modifiés.
+          {jourHeure(closLe)}. Les candidats ne pourront plus être modifiés.
         </Confirmation>
       )}
       {action === "cloturer" && (

@@ -1,6 +1,7 @@
 package fr.election.api.admin;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -105,9 +106,9 @@ public class ScrutinAdminService {
 
 	// Génère tous les duels (chaque candidat contre chaque autre, une fois) puis ouvre le vote
 	@Transactional
-	public PeriodeDto ouvrir(LocalDate closLe) {
+	public PeriodeDto ouvrir(LocalDateTime closLe) {
 		PeriodeVote periode = periodeDansLEtat(PeriodeVote.PREPARATION, "Seul un scrutin en préparation peut être démarré");
-		if (closLe.isBefore(LocalDate.now())) {
+		if (!closLe.isAfter(LocalDateTime.now())) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La date de clôture doit être dans le futur");
 		}
 		List<Candidat> candidats = candidatRepository.findByPeriodeIdPeriodeOrderByIdCandidat(periode.getIdPeriode());
@@ -137,7 +138,7 @@ public class ScrutinAdminService {
 	public PeriodeDto cloturer() {
 		PeriodeVote periode = periodeDansLEtat(PeriodeVote.OUVERT, "Aucun scrutin ouvert à clôturer");
 		periode.setStatut(false);
-		periode.setClosLe(LocalDate.now());
+		periode.setClosLe(LocalDateTime.now());
 		return electionService.versDto(periode);
 	}
 
