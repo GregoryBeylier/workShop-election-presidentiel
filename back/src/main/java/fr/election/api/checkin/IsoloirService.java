@@ -47,7 +47,7 @@ public class IsoloirService {
 		return qrTokenService.generer(isoloir, clock.instant());
 	}
 
-	static String sha256Hex(String valeur) {
+	public static String sha256Hex(String valeur) {
 		try {
 			return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(valeur.getBytes(StandardCharsets.UTF_8)));
 		} catch (NoSuchAlgorithmException e) {

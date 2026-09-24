@@ -33,6 +33,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.server.ResponseStatusException;
 
+import fr.election.api.admin.IsoloirAdminService;
+import fr.election.api.admin.dto.IsoloirCreeDto;
 import fr.election.api.auth.JwtService;
 import fr.election.api.checkin.CheckinService.ResultatCheckin;
 import fr.election.api.checkin.CheckinService.ResultatVoteEnLigne;
@@ -90,6 +92,7 @@ class CheckinTests {
 	@Autowired AffrontementRepository affrontementRepository;
 	@Autowired LigneVoteRepository ligneVoteRepository;
 	@Autowired TransactionTemplate transaction;
+	@Autowired IsoloirAdminService isoloirAdminService;
 
 	MockMvc mvc;
 	Utilisateur alice, bob, chloe, david;
@@ -562,6 +565,62 @@ class CheckinTests {
 		assertThat(resultats).filteredOn(r -> r == ResultatCheckin.success).hasSize(1);
 		assertThat(resultats).filteredOn(r -> r == ResultatCheckin.booth_busy).hasSize(9);
 		assertThat(emargementRepository.count()).isEqualTo(1);
+	}
+
+	@Test
+	void isoloirCreeParLAdminFonctionneAvecSesCles() throws Exception {
+		IsoloirCreeDto cree = isoloirAdminService.creer("  Isoloir 3 ");
+		Isoloir isoloir = isoloirRepository.findById(cree.id()).orElseThrow();
+
+		assertThat(isoloir.getLibelle()).isEqualTo("Isoloir 3");
+		// Les clés ne sont jamais stockées en clair, et chaque isoloir a les siennes
+		assertThat(cree.cleEcran()).hasSize(48).isNotEqualTo(cree.cleBorne());
+		assertThat(isoloir.getCleTabletteHash()).isEqualTo(IsoloirService.sha256Hex(cree.cleEcran()));
+		assertThat(isoloir.getCleBorneHash()).isEqualTo(IsoloirService.sha256Hex(cree.cleBorne()));
+		assertThat(isoloirAdminService.creer("Isoloir 4").cleEcran()).isNotEqualTo(cree.cleEcran());
+
+		mvc.perform(get("/api/booths/" + cree.id() + "/current-qr").header("X-Isoloir-Cle", cree.cleEcran()))
+			.andExpect(status().isOk());
+		// Nouvelle borne qui n'a encore jamais appelé : hors ligne
+		assertThat(isoloirAdminService.lister()).filteredOn(i -> i.id().equals(cree.id()))
+			.singleElement().satisfies(i -> {
+				assertThat(i.aUneBorne()).isTrue();
+				assertThat(i.borneEnLigne()).isFalse();
+			});
+	}
+
+	@Test
+	void listeDesIsoloirsSuitLaBorne() {
+		brancherBorne(isoloir1, 2);
+		checkinService.checkin(id(alice), qr(isoloir1));
+
+		assertThat(isoloirAdminService.lister()).filteredOn(i -> i.id().equals(isoloir1.getIdIsoloir()))
+			.singleElement().satisfies(i -> {
+				assertThat(i.borneEnLigne()).isTrue();
+				assertThat(i.voteEnCours()).isTrue();
+			});
+	}
+
+	@Test
+	void isoloirDesactiveRefuseLeScan() {
+		String token = qr(isoloir1);
+		isoloirAdminService.desactiver(isoloir1.getIdIsoloir());
+
+		assertThat(checkinService.checkin(id(alice), token).status()).isEqualTo(ResultatCheckin.invalid_token);
+	}
+
+	@Test
+	void backOfficeIsoloirsReserveAuxAdmins() throws Exception {
+		mvc.perform(get("/api/admin/isoloirs").header("Authorization", bearer(alice)))
+			.andExpect(status().isForbidden());
+		mvc.perform(post("/api/admin/isoloirs").header("Authorization", "Bearer " + jwtService.generer(chloe, true))
+				.contentType(MediaType.APPLICATION_JSON).content("{\"libelle\":\"Isoloir 5\"}"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.cleEcran").isString())
+			.andExpect(jsonPath("$.cleBorne").isString());
+		mvc.perform(post("/api/admin/isoloirs").header("Authorization", "Bearer " + jwtService.generer(chloe, true))
+				.contentType(MediaType.APPLICATION_JSON).content("{\"libelle\":\" \"}"))
+			.andExpect(status().isBadRequest());
 	}
 
 }
