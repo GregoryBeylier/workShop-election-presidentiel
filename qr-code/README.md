@@ -5,6 +5,8 @@
 > et le prototype autonome (sans login), utile pour une démo rapide.
 >
 > 🔒 **Sécurité** : comment le système empêche de truquer le vote, et les failles qui restent : [SECURITE.md](SECURITE.md).
+>
+> 🎬 **Démo** avec ton PC, un écran et un téléphone, sans base ni Raspberry : [DEMO.md](DEMO.md).
 
 Implémentation autonome de [spec-checkin-qr-isoloir.md](spec-checkin-qr-isoloir.md), sur la même stack
 que l'appli (Spring Boot 4 + React/Vite/Tailwind).
