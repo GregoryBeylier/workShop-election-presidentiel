@@ -21,7 +21,7 @@ const INTERVALLE_MS = 3000;
 
 /**
  * Onglet "Isoloirs" : un isoloir = un écran qui affiche le code + une borne ESP32.
- * Création (avec ses clés), suivi des bornes en direct, désactivation.
+ * Création (avec l'IP de sa borne), suivi des bornes en direct, désactivation.
  */
 function OngletIsoloirs() {
   const {
@@ -30,6 +30,7 @@ function OngletIsoloirs() {
     recharger,
   } = usePolling(getIsoloirs, INTERVALLE_MS);
   const [libelle, setLibelle] = useState("");
+  const [ipBorne, setIpBorne] = useState("");
   const [enCours, setEnCours] = useState(false);
   const [cree, setCree] = useState<IsoloirCree | null>(null);
   const [aDesactiver, setADesactiver] = useState<IsoloirAdmin | null>(null);
@@ -42,8 +43,9 @@ function OngletIsoloirs() {
     setEnCours(true);
     setMessage(null);
     try {
-      setCree(await creerIsoloir(libelle.trim() || libelleParDefaut));
+      setCree(await creerIsoloir(libelle.trim() || libelleParDefaut, ipBorne.trim()));
       setLibelle("");
+      setIpBorne("");
       recharger();
     } catch (err) {
       setMessage({ type: "erreur", texte: (err as Error).message });
@@ -85,13 +87,26 @@ function OngletIsoloirs() {
               maxLength={50}
             />
           </div>
-          <Bouton type="submit" disabled={enCours}>
+          <div className="flex-1">
+            <Champ
+              label="IP de la borne (ESP32)"
+              id="isoloir-ip-borne"
+              value={ipBorne}
+              onChange={(e) => setIpBorne(e.target.value.replace(/[^\d.]/g, ""))}
+              placeholder="192.168.50.21"
+              inputMode="decimal"
+              required
+              pattern="^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$"
+              title="Adresse IPv4, par exemple 192.168.50.21"
+            />
+          </div>
+          <Bouton type="submit" disabled={enCours || !ipBorne.trim()}>
             <Plus size={16} /> {enCours ? "Création…" : "Créer l'isoloir"}
           </Bouton>
         </form>
         <p className="mt-3 text-xs text-gray-500">
-          Le serveur génère les clés de l'écran et de la borne. Elles
-          s'affichent une seule fois, juste après la création.
+          La borne est reconnue par son IP fixe sur le Wi-Fi. Le serveur génère
+          la clé de l'écran : elle s'affiche une seule fois, juste après la création.
         </p>
       </Panneau>
 
@@ -119,6 +134,7 @@ function OngletIsoloirs() {
                     {i.libelle}{" "}
                     <span className="text-sm font-normal text-gray-500">
                       n° {i.id}
+                      {i.ipBorne && ` · borne ${i.ipBorne}`}
                     </span>
                   </p>
                 </div>
@@ -168,7 +184,7 @@ function EtatIsoloir({ isoloir }: { isoloir: IsoloirAdmin }) {
   }
   return (
     <>
-      {!isoloir.aUneBorne ? (
+      {!isoloir.ipBorne ? (
         <Badge couleur="gray">Sans borne</Badge>
       ) : isoloir.borneEnLigne ? (
         <Badge couleur="green">Borne en ligne</Badge>

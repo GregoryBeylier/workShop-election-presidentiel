@@ -34,7 +34,7 @@ public class IsoloirAdminController {
 
 	@PostMapping
 	public IsoloirCreeDto creer(@Valid @RequestBody IsoloirRequest requete) {
-		return isoloirService.creer(requete.libelle());
+		return isoloirService.creer(requete.libelle(), requete.ipBorne());
 	}
 
 	@PostMapping("/{idIsoloir}/desactiver")

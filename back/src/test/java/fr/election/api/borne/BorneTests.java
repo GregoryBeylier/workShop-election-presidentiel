@@ -23,6 +23,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.context.WebApplicationContext;
@@ -59,8 +60,9 @@ import fr.election.api.repository.UtilisateurRepository;
 class BorneTests {
 
 	private static final Instant T0 = Instant.ofEpochMilli(1_800_000_000_000L);
-	private static final String CLE_BORNE_1 = "cle-borne-1";
-	private static final String CLE_BORNE_2 = "cle-borne-2";
+	// IP fixes des bornes sur le Wi-Fi : c'est ce qui les identifie
+	private static final String IP_BORNE_1 = "192.168.50.21";
+	private static final String IP_BORNE_2 = "192.168.50.22";
 
 	@TestConfiguration
 	static class Config {
@@ -116,8 +118,8 @@ class BorneTests {
 		d13 = duel(c1, c3);
 		d23 = duel(c2, c3);
 
-		isoloir1 = isoloir("Isoloir 1", CLE_BORNE_1);
-		isoloir2 = isoloir("Isoloir 2", CLE_BORNE_2);
+		isoloir1 = isoloir("Isoloir 1", IP_BORNE_1);
+		isoloir2 = isoloir("Isoloir 2", IP_BORNE_2);
 	}
 
 	@AfterEach
@@ -165,35 +167,43 @@ class BorneTests {
 		return affrontementRepository.save(a);
 	}
 
-	private Isoloir isoloir(String libelle, String cleBorne) {
+	private Isoloir isoloir(String libelle, String ipBorne) {
 		Isoloir iso = new Isoloir();
 		iso.setLibelle(libelle);
 		iso.setCleHmac("5c7b55f6a0ce90fe05a08974ae4b2c20aeecbb75c8325bbde2436958483f5d6a");
 		iso.setCleTabletteHash(IsoloirService.sha256Hex("cle-ecran-" + libelle));
-		iso.setCleBorneHash(IsoloirService.sha256Hex(cleBorne));
+		iso.setIpBorne(ipBorne);
 		return isoloirRepository.save(iso);
 	}
 
 	// Le votant tape le code de l'isoloir (la borne vient d'appeler : elle est en ligne)
-	private void scanner(Utilisateur u, Isoloir isoloir, String cleBorne) throws Exception {
-		etat(cleBorne).andExpect(status().isOk());
+	private void scanner(Utilisateur u, Isoloir isoloir, String ipBorne) throws Exception {
+		etat(ipBorne).andExpect(status().isOk());
 		String code = codeIsoloirService.generer(isoloir, horloge.instant()).code();
 		assertThat(checkinService.checkin(u.getIdUtilisateur(), code).status()).isEqualTo(ResultatCheckin.success);
 	}
 
-	private ResultActions etat(String cleBorne) throws Exception {
-		return mvc.perform(get("/api/borne/etat").header("X-Borne-Cle", cleBorne));
+	// Requête qui vient de l'IP de la borne
+	private static RequestPostProcessor depuis(String ip) {
+		return requete -> {
+			requete.setRemoteAddr(ip);
+			return requete;
+		};
 	}
 
-	private ResultActions choix(String cleBorne, String jeton, Affrontement duel, String choix) throws Exception {
-		return mvc.perform(post("/api/borne/choix").header("X-Borne-Cle", cleBorne)
+	private ResultActions etat(String ipBorne) throws Exception {
+		return mvc.perform(get("/api/borne/etat").with(depuis(ipBorne)));
+	}
+
+	private ResultActions choix(String ipBorne, String jeton, Affrontement duel, String choix) throws Exception {
+		return mvc.perform(post("/api/borne/choix").with(depuis(ipBorne))
 			.contentType(MediaType.APPLICATION_JSON)
 			.content("{\"jeton\":\"" + jeton + "\",\"idAffrontement\":" + duel.getIdAffrontement()
 					+ ",\"choix\":\"" + choix + "\"}"));
 	}
 
-	private String jeton(String cleBorne) throws Exception {
-		String json = etat(cleBorne).andReturn().getResponse().getContentAsString();
+	private String jeton(String ipBorne) throws Exception {
+		String json = etat(ipBorne).andReturn().getResponse().getContentAsString();
 		return JsonPath.read(json, "$.jeton");
 	}
 
@@ -206,13 +216,13 @@ class BorneTests {
 
 	@Test
 	void parcoursCompletDEmma() throws Exception {
-		etat(CLE_BORNE_1).andExpect(status().isOk())
+		etat(IP_BORNE_1).andExpect(status().isOk())
 			.andExpect(jsonPath("$.etat").value("LIBRE"))
 			.andExpect(jsonPath("$.jeton").doesNotExist());
 
-		scanner(alice, isoloir1, CLE_BORNE_1);
+		scanner(alice, isoloir1, IP_BORNE_1);
 
-		etat(CLE_BORNE_1).andExpect(status().isOk())
+		etat(IP_BORNE_1).andExpect(status().isOk())
 			.andExpect(jsonPath("$.etat").value("DEVERROUILLEE"))
 			.andExpect(jsonPath("$.nbCandidats").value(3))
 			.andExpect(jsonPath("$.duel.numero").value(1))
@@ -220,15 +230,15 @@ class BorneTests {
 			.andExpect(jsonPath("$.duel.idAffrontement").value(d12.getIdAffrontement()))
 			.andExpect(jsonPath("$.duel.gauche").value(0))
 			.andExpect(jsonPath("$.duel.droite").value(1));
-		String jeton = jeton(CLE_BORNE_1);
+		String jeton = jeton(IP_BORNE_1);
 
-		choix(CLE_BORNE_1, jeton, d12, "DROITE").andExpect(status().isOk())
+		choix(IP_BORNE_1, jeton, d12, "DROITE").andExpect(status().isOk())
 			.andExpect(jsonPath("$.statut").value("SUIVANT"))
 			.andExpect(jsonPath("$.duel.numero").value(2))
 			.andExpect(jsonPath("$.duel.idAffrontement").value(d13.getIdAffrontement()))
 			.andExpect(jsonPath("$.duel.gauche").value(0))
 			.andExpect(jsonPath("$.duel.droite").value(2));
-		choix(CLE_BORNE_1, jeton, d13, "GAUCHE").andExpect(status().isOk())
+		choix(IP_BORNE_1, jeton, d13, "GAUCHE").andExpect(status().isOk())
 			.andExpect(jsonPath("$.duel.idAffrontement").value(d23.getIdAffrontement()))
 			.andExpect(jsonPath("$.duel.gauche").value(1))
 			.andExpect(jsonPath("$.duel.droite").value(2));
@@ -238,7 +248,7 @@ class BorneTests {
 		assertThat(ligneVoteRepository.count()).isZero();
 		assertThat(checkinService.statut(alice.getIdUtilisateur())).isEqualTo(StatutVotant.checked_in_isoloir);
 
-		choix(CLE_BORNE_1, jeton, d23, "BLANC").andExpect(status().isOk())
+		choix(IP_BORNE_1, jeton, d23, "BLANC").andExpect(status().isOk())
 			.andExpect(jsonPath("$.statut").value("TERMINE"))
 			.andExpect(jsonPath("$.duel").doesNotExist());
 
@@ -249,25 +259,25 @@ class BorneTests {
 				d23.getIdAffrontement(), -1));
 		assertThat(choixRepository.count()).isZero();
 		assertThat(checkinService.statut(alice.getIdUtilisateur())).isEqualTo(StatutVotant.voted_booth);
-		etat(CLE_BORNE_1).andExpect(jsonPath("$.etat").value("LIBRE"));
+		etat(IP_BORNE_1).andExpect(jsonPath("$.etat").value("LIBRE"));
 	}
 
 	@Test
 	void choixRenvoyeDeuxFoisNestPasCompteDeuxFois() throws Exception {
-		scanner(alice, isoloir1, CLE_BORNE_1);
-		String jeton = jeton(CLE_BORNE_1);
+		scanner(alice, isoloir1, IP_BORNE_1);
+		String jeton = jeton(IP_BORNE_1);
 
-		choix(CLE_BORNE_1, jeton, d12, "GAUCHE").andExpect(jsonPath("$.duel.numero").value(2));
+		choix(IP_BORNE_1, jeton, d12, "GAUCHE").andExpect(jsonPath("$.duel.numero").value(2));
 		// Coupure Wi-Fi : la borne renvoie la même requête, elle reçoit la même réponse
-		choix(CLE_BORNE_1, jeton, d12, "GAUCHE").andExpect(status().isOk())
+		choix(IP_BORNE_1, jeton, d12, "GAUCHE").andExpect(status().isOk())
 			.andExpect(jsonPath("$.statut").value("SUIVANT"))
 			.andExpect(jsonPath("$.duel.numero").value(2));
 		assertThat(choixRepository.count()).isEqualTo(1);
 
-		choix(CLE_BORNE_1, jeton, d13, "GAUCHE");
-		choix(CLE_BORNE_1, jeton, d23, "GAUCHE").andExpect(jsonPath("$.statut").value("TERMINE"));
+		choix(IP_BORNE_1, jeton, d13, "GAUCHE");
+		choix(IP_BORNE_1, jeton, d23, "GAUCHE").andExpect(jsonPath("$.statut").value("TERMINE"));
 		// Rejeu du dernier duel après le bulletin : TERMINE, rien de plus
-		choix(CLE_BORNE_1, jeton, d23, "GAUCHE").andExpect(status().isOk())
+		choix(IP_BORNE_1, jeton, d23, "GAUCHE").andExpect(status().isOk())
 			.andExpect(jsonPath("$.statut").value("TERMINE"));
 		assertThat(bulletinRepository.count()).isEqualTo(1);
 		assertThat(ligneVoteRepository.count()).isEqualTo(3);
@@ -275,38 +285,46 @@ class BorneTests {
 
 	@Test
 	void pasLeDuelAttenduRefuse() throws Exception {
-		scanner(alice, isoloir1, CLE_BORNE_1);
-		String jeton = jeton(CLE_BORNE_1);
+		scanner(alice, isoloir1, IP_BORNE_1);
+		String jeton = jeton(IP_BORNE_1);
 
-		choix(CLE_BORNE_1, jeton, d13, "GAUCHE").andExpect(status().isConflict());
+		choix(IP_BORNE_1, jeton, d13, "GAUCHE").andExpect(status().isConflict());
 		assertThat(choixRepository.count()).isZero();
 	}
 
 	@Test
 	void borneQuiRedemarreReprendAuBonDuel() throws Exception {
-		scanner(alice, isoloir1, CLE_BORNE_1);
-		choix(CLE_BORNE_1, jeton(CLE_BORNE_1), d12, "DROITE");
+		scanner(alice, isoloir1, IP_BORNE_1);
+		choix(IP_BORNE_1, jeton(IP_BORNE_1), d12, "DROITE");
 
-		etat(CLE_BORNE_1).andExpect(jsonPath("$.etat").value("DEVERROUILLEE"))
+		etat(IP_BORNE_1).andExpect(jsonPath("$.etat").value("DEVERROUILLEE"))
 			.andExpect(jsonPath("$.duel.numero").value(2))
 			.andExpect(jsonPath("$.duel.idAffrontement").value(d13.getIdAffrontement()));
 	}
 
 	@Test
-	void cleAbsenteFausseOuIsoloirDesactiveRefusee() throws Exception {
+	void ipInconnueOuIsoloirDesactiveRefusee() throws Exception {
+		// Par défaut MockMvc vient de 127.0.0.1, qui n'est la borne d'aucun isoloir
 		mvc.perform(get("/api/borne/etat")).andExpect(status().isUnauthorized());
-		etat("pas-la-bonne-cle").andExpect(status().isUnauthorized());
+		etat("192.168.50.99").andExpect(status().isUnauthorized());
+		// L'ancienne clé ne sert plus à rien
+		mvc.perform(get("/api/borne/etat").header("X-Borne-Cle", "cle-borne-1")).andExpect(status().isUnauthorized());
 
 		isoloir1.setActif(false);
 		isoloirRepository.save(isoloir1);
-		etat(CLE_BORNE_1).andExpect(status().isUnauthorized());
+		etat(IP_BORNE_1).andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void ipv4AuFormatIpv6Reconnue() throws Exception {
+		etat("::ffff:" + IP_BORNE_1).andExpect(status().isOk());
 	}
 
 	@Test
 	void chaqueAppelSignaleLaBorneEnLigne() throws Exception {
 		assertThat(isoloirRepository.findById(isoloir1.getIdIsoloir()).orElseThrow().getDerniereActiviteBorne()).isNull();
 
-		etat(CLE_BORNE_1).andExpect(status().isOk());
+		etat(IP_BORNE_1).andExpect(status().isOk());
 
 		assertThat(isoloirRepository.findById(isoloir1.getIdIsoloir()).orElseThrow().getDerniereActiviteBorne())
 			.isNotNull();
@@ -316,44 +334,44 @@ class BorneTests {
 
 	@Test
 	void uneBorneNePeutPasVoterPourUneAutre() throws Exception {
-		scanner(alice, isoloir1, CLE_BORNE_1);
-		String jetonBorne1 = jeton(CLE_BORNE_1);
+		scanner(alice, isoloir1, IP_BORNE_1);
+		String jetonBorne1 = jeton(IP_BORNE_1);
 
 		// La borne 2 ne voit pas le vote de la borne 1, et ne peut pas l'utiliser
-		etat(CLE_BORNE_2).andExpect(jsonPath("$.etat").value("LIBRE"));
-		choix(CLE_BORNE_2, jetonBorne1, d12, "GAUCHE").andExpect(status().isNotFound());
+		etat(IP_BORNE_2).andExpect(jsonPath("$.etat").value("LIBRE"));
+		choix(IP_BORNE_2, jetonBorne1, d12, "GAUCHE").andExpect(status().isNotFound());
 		assertThat(choixRepository.count()).isZero();
 	}
 
 	@Test
 	void requeteMalFormeeRefusee() throws Exception {
-		scanner(alice, isoloir1, CLE_BORNE_1);
-		String jeton = jeton(CLE_BORNE_1);
+		scanner(alice, isoloir1, IP_BORNE_1);
+		String jeton = jeton(IP_BORNE_1);
 
-		choix(CLE_BORNE_1, jeton, d12, "HAUT").andExpect(status().isBadRequest());
-		choix(CLE_BORNE_1, "abc", d12, "GAUCHE").andExpect(status().isBadRequest());
-		mvc.perform(post("/api/borne/choix").header("X-Borne-Cle", CLE_BORNE_1)
+		choix(IP_BORNE_1, jeton, d12, "HAUT").andExpect(status().isBadRequest());
+		choix(IP_BORNE_1, "abc", d12, "GAUCHE").andExpect(status().isBadRequest());
+		mvc.perform(post("/api/borne/choix").with(depuis(IP_BORNE_1))
 				.contentType(MediaType.APPLICATION_JSON).content("{}"))
 			.andExpect(status().isBadRequest());
-		mvc.perform(post("/api/borne/choix").header("X-Borne-Cle", CLE_BORNE_1)
+		mvc.perform(post("/api/borne/choix").with(depuis(IP_BORNE_1))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"jeton\":\"" + jeton + "\",\"idAffrontement\":999999,\"choix\":\"GAUCHE\"}"))
 			.andExpect(status().isBadRequest());
-		choix(CLE_BORNE_1, "999999", d12, "GAUCHE").andExpect(status().isNotFound());
+		choix(IP_BORNE_1, "999999", d12, "GAUCHE").andExpect(status().isNotFound());
 	}
 
 	@Test
 	void apresLeVoteLaBorneAccueilleLeVotantSuivant() throws Exception {
-		scanner(alice, isoloir1, CLE_BORNE_1);
-		String jetonAlice = jeton(CLE_BORNE_1);
+		scanner(alice, isoloir1, IP_BORNE_1);
+		String jetonAlice = jeton(IP_BORNE_1);
 		for (Affrontement d : List.of(d12, d13, d23)) {
-			choix(CLE_BORNE_1, jetonAlice, d, "GAUCHE");
+			choix(IP_BORNE_1, jetonAlice, d, "GAUCHE");
 		}
 
-		scanner(chloe, isoloir1, CLE_BORNE_1);
-		String jetonChloe = jeton(CLE_BORNE_1);
+		scanner(chloe, isoloir1, IP_BORNE_1);
+		String jetonChloe = jeton(IP_BORNE_1);
 		assertThat(jetonChloe).isNotEqualTo(jetonAlice);
-		etat(CLE_BORNE_1).andExpect(jsonPath("$.duel.numero").value(1));
+		etat(IP_BORNE_1).andExpect(jsonPath("$.duel.numero").value(1));
 	}
 
 }

@@ -18,7 +18,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
-import fr.election.api.checkin.IsoloirService;
 import fr.election.api.model.Affrontement;
 import fr.election.api.model.Bulletin;
 import fr.election.api.model.Candidat;
@@ -88,18 +87,17 @@ public class BorneService {
 	}
 
 	/**
-	 * Retrouve l'isoloir à partir de la clé de la borne (401 si absente, inconnue ou isoloir désactivé)
+	 * Retrouve l'isoloir à partir de l'IP de la borne (401 si aucun isoloir actif n'a cette IP)
 	 * et note l'heure de l'appel : c'est le battement de cœur qui dit au check-in que la borne est en ligne.
 	 * Transaction à part, validée tout de suite : elle ne garde aucun verrou pendant le vote.
 	 */
 	@Transactional
-	public Integer identifier(String cleBorne) {
-		if (cleBorne == null || cleBorne.isBlank()) {
-			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Clé de borne absente");
-		}
-		Isoloir isoloir = isoloirRepository.findByCleBorneHash(IsoloirService.sha256Hex(cleBorne))
-			.filter(Isoloir::isActif)
-			.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Clé de borne invalide"));
+	public Integer identifier(String ipBorne) {
+		Isoloir isoloir = isoloirRepository.findByIpBorneAndActifTrue(ipBorne).orElseThrow(() -> {
+			// Visible dans les logs du back : l'IP à saisir dans l'onglet Isoloirs si la borne est refusée
+			log.warn("Borne refusée : aucun isoloir actif pour l'IP {}", ipBorne);
+			return new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Borne inconnue");
+		});
 		isoloirRepository.noterActiviteBorne(isoloir.getIdIsoloir(), LocalDateTime.now(clock));
 		return isoloir.getIdIsoloir();
 	}

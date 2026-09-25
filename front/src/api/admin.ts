@@ -142,25 +142,26 @@ export interface IsoloirAdmin {
   id: number;
   libelle: string;
   actif: boolean;
-  aUneBorne: boolean;
+  ipBorne: string | null; // IP fixe de sa borne ESP32 (null = isoloir sans borne)
   borneEnLigne: boolean; // la borne a appelé le serveur il y a moins de 10 s
   voteEnCours: boolean; // un votant a validé le code et n'a pas encore fini sur la borne
 }
 
-/** Clés en clair de l'isoloir créé : renvoyées une seule fois, la base n'en garde que l'empreinte. */
+/** Isoloir créé, avec la clé de l'écran en clair : renvoyée une seule fois, la base n'en garde que l'empreinte. */
 export interface IsoloirCree {
   id: number;
   libelle: string;
   cleEcran: string;
-  cleBorne: string;
+  ipBorne: string;
 }
 
 export const getIsoloirs = () => apiFetch<IsoloirAdmin[]>("/admin/isoloirs");
 
-export const creerIsoloir = (libelle: string) =>
+// ipBorne : IP fixe de l'ESP32 sur le Wi-Fi, c'est elle qui identifie la borne auprès du serveur
+export const creerIsoloir = (libelle: string, ipBorne: string) =>
   apiFetch<IsoloirCree>("/admin/isoloirs", {
     method: "POST",
-    body: { libelle },
+    body: { libelle, ipBorne },
   });
 
 /** Écran ou borne perdu / manipulé : ses codes et sa borne sont refusés tout de suite. */

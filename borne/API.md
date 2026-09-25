@@ -6,7 +6,7 @@
 
 > **Ce qui change par rapport à ROUTES.md**
 > - Le déverrouillage de la borne se fait par le **check-in par code de l'isoloir** (code à 6 chiffres affiché sur l'écran de l'isoloir, qui change toutes les 30 s ; il a remplacé le QR tournant), plus par un autocollant QR fixe. Les routes A1, A2, D1, D2 et la page front `/borne/:id` disparaissent.
-> - La borne **n'envoie plus son numéro** : elle s'identifie par sa clé (`X-Borne-Cle`). Les routes deviennent `/api/borne/...` au lieu de `/api/bornes/{id}/...`.
+> - La borne **n'envoie plus son numéro** : le serveur la reconnaît à son IP fixe (saisie à la création de l'isoloir). Les routes deviennent `/api/borne/...` au lieu de `/api/bornes/{id}/...`.
 > - L'abandon (C maintenu 5 s) est **mis de côté** pour l'instant.
 > - Les formats JSON de `etat` et `choix` ne changent pas : le firmware garde sa logique.
 
@@ -31,8 +31,8 @@ Il n'y en a que trois pour la borne, et **aucune nouvelle pour l'appli** : le t�
 | # | Méthode | Route | Quand | Auth |
 |---|---|---|---|---|
 | B1 | `GET` | `/api/health` | au démarrage | aucune — **existe déjà** |
-| B2 | `GET` | `/api/borne/etat` | toutes les 2 s tant que la borne attend | `X-Borne-Cle` |
-| B3 | `POST` | `/api/borne/choix` | à chaque appui A, B ou C | `X-Borne-Cle` |
+| B2 | `GET` | `/api/borne/etat` | toutes les 2 s tant que la borne attend | IP de la borne |
+| B3 | `POST` | `/api/borne/choix` | à chaque appui A, B ou C | IP de la borne |
 
 ### Contraintes de la carte (valables pour B2 et B3)
 
@@ -43,22 +43,23 @@ Il n'y en a que trois pour la borne, et **aucune nouvelle pour l'appli** : le t�
 
 ---
 
-## 3. Authentification : la clé de la borne
+## 3. Authentification : l'IP de la borne
 
-Chaque borne a **sa propre clé**, envoyée à chaque appel :
+Chaque borne a une **IP fixe** sur le Wi-Fi (réservation DHCP sur le routeur, ou IP fixée dans le firmware).
+Cette IP est saisie à la création de l'isoloir (Admin → Isoloirs), et c'est elle qui identifie la borne :
 
-```
-X-Borne-Cle: 3b9f…(48 caractères hex)
-```
+- Le serveur lit l'**IP d'où vient la requête** (`getRemoteAddr`, connexion TCP) et retrouve l'isoloir actif qui a cette IP.
+  La borne n'envoie ni numéro ni clé : l'en-tête `X-Borne-Cle` est ignoré, `CLE_BORNE` peut rester vide dans `config.h`.
+- IP inconnue ou isoloir désactivé : `401`. Le back écrit l'IP refusée dans ses logs (`Borne refusée : aucun isoloir actif pour l'IP …`),
+  pratique pour savoir quelle IP saisir.
+- Deux isoloirs actifs ne peuvent pas avoir la même IP (`409` à la création). Borne remplacée ou isoloir perdu : désactiver l'isoloir,
+  puis en recréer un avec la même IP.
+- La borne doit appeler **directement le back** (port 8080), pas à travers nginx : sinon le back verrait l'IP de nginx.
+  Les en-têtes `X-Forwarded-For` ne sont jamais pris en compte (n'importe qui pourrait en écrire un).
 
-- Le serveur retrouve **de quel isoloir il s'agit à partir de la clé**. La borne n'envoie jamais de numéro : elle ne peut donc pas se faire passer pour une autre.
-- La base ne garde que l'**empreinte SHA-256** de la clé (`isoloir.cle_borne_hash`), jamais la clé elle-même.
-- Cette clé est **différente de celle de l'écran** de l'isoloir : si l'une fuit, l'autre reste sûre.
-- Générée une fois par borne avant le jour J (`openssl rand -hex 24`), recopiée dans `config.h`, jamais commitée.
-
-> Pourquoi pas l'id dans l'URL ou dans le body ? Ça ne change rien à la sécurité : l'URL et le body partent dans la même requête, et une borne peut y écrire ce qu'elle veut. C'est la clé qui prouve qui parle.
-
-> ⚠️ La borne parle en **HTTP simple** : la clé passe en clair sur le Wi-Fi. C'est acceptable sur le **réseau local dédié** à l'événement (protégé par mot de passe, seulement serveur + écrans + bornes). HTTPS sur l'ESP32 : plus tard si besoin.
+> ⚠️ **Limite** : une IP n'est pas un secret. Quelqu'un sur le même Wi-Fi qui prend l'IP de la borne (borne éteinte, IP fixée à la main)
+> peut se faire passer pour elle et choisir les duels à la place du votant. Parades : Wi-Fi de l'élection protégé par mot de passe,
+> isolation des clients sur le point d'accès si possible, et surveiller l'onglet Isoloirs (« Borne en ligne » alors qu'elle est éteinte = alerte).
 
 ---
 
