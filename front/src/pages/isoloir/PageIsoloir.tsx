@@ -76,10 +76,10 @@ function PageIsoloir() {
   if (state.kind === "unauthorized") {
     return (
       <FullScreen>
-        <p className="text-2xl font-heading font-bold text-brand-dark text-center px-6">
+        <p className="text-2xl font-heading font-bold text-white text-center px-6">
           Tablette non autorisée
         </p>
-        <p className="text-gray-500 text-center px-6">
+        <p className="text-gray-400 text-center px-6">
           Ouvrez cette page avec la clé de l'isoloir : /isoloir/{id}?cle=…
         </p>
       </FullScreen>
@@ -96,21 +96,23 @@ function PageIsoloir() {
   return (
     <FullScreen>
       {payload ? (
+        // Fond noir autour pour ne pas éblouir dans l'isoloir ; le QR garde sa marge blanche
+        // (4 modules) dont les téléphones ont besoin pour le lire
         <QRCodeSVG
           value={payload}
           size={1024}
-          marginSize={2}
+          marginSize={4}
           level="M"
-          className="w-[min(85vw,80vh)] h-auto"
+          className="w-[min(70vw,65vh)] h-auto rounded-lg"
         />
       ) : (
-        <p className="text-2xl font-heading font-bold text-brand-dark">
+        <p className="text-2xl font-heading font-bold text-gray-300">
           {state.kind === "loading" ? "Chargement…" : "Connexion au serveur perdue"}
         </p>
       )}
 
       {/* Indicateur discret pour le staff */}
-      <div className="absolute bottom-4 right-4 flex items-center gap-2 text-xs text-gray-400">
+      <div className="absolute bottom-4 right-4 flex items-center gap-2 text-xs text-gray-500">
         <span
           className={`inline-block w-2.5 h-2.5 rounded-full ${
             connected ? "bg-brand-green" : "bg-brand-pink animate-pulse"
@@ -124,7 +126,7 @@ function PageIsoloir() {
 
 function FullScreen({ children }: { children: ReactNode }) {
   return (
-    <div className="fixed inset-0 bg-white flex flex-col items-center justify-center gap-4 select-none">
+    <div className="fixed inset-0 bg-black flex flex-col items-center justify-center gap-4 select-none">
       {children}
     </div>
   );
