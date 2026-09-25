@@ -127,28 +127,11 @@ function PageVoteIsoloir() {
   );
 }
 
-/** Mode d'emploi de la borne, affiché pendant que le votant y vote. */
+/** Affiché pendant que le votant vote sur la borne (le mode d'emploi est sur la borne elle-même). */
 function InstructionsBorne() {
   return (
     <>
       <Alerte message={{ type: "succes", texte: "Identification réussie : votez maintenant sur la borne." }} />
-      <div className="flex flex-col gap-2 text-gray-600">
-        <p>
-          La borne allume deux candidats, un à gauche et un à droite. Pour chaque duel, appuyez sur :
-        </p>
-        <ul className="flex flex-col gap-1 pl-1">
-          <li>
-            <b className="text-brand-dark">A</b> pour le candidat de gauche,
-          </li>
-          <li>
-            <b className="text-brand-dark">B</b> pour le candidat de droite,
-          </li>
-          <li>
-            <b className="text-brand-dark">C</b> pour voter blanc.
-          </li>
-        </ul>
-        <p>Un jingle confirme chaque choix, puis le duel suivant s'allume.</p>
-      </div>
       <p className="flex items-center justify-center gap-2 text-sm text-gray-500" role="status">
         <span className="h-2 w-2 animate-pulse rounded-full bg-brand-teal" />
         En attente de la fin de votre vote…
