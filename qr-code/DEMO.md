@@ -59,7 +59,7 @@ autre appareil) : **Borne en ligne**, **Libre**.
 | 1 | Sur le téléphone : `https://192.168.1.20:5173`, connexion avec `test@mydigitalschool.fr` / `root` | La page d'accueil de l'appli |
 | 2 | **Voter** | Le choix : en ligne ou à l'isoloir |
 | 3 | **Voter à l'isoloir** | L'avertissement « vous renoncez au vote en ligne » et le bouton Scanner |
-| 4 | **Scanner** le QR de l'écran | Téléphone : « votez sur la borne », avec le mode d'emploi A / B / C |
+| 4 | **Scanner** le QR de l'écran | Téléphone : « votez maintenant sur la borne », puis « En attente de la fin de votre vote… » |
 | 5 | *(2 s au plus)* | Fausse borne : `DEVERROUILLEE`, puis `DUEL 1 / 6` avec les deux candidats |
 | 6 | Dans le terminal : `A`, `B` ou `C` puis Entrée, pour chaque duel | `♪ … enregistré, duel suivant…` |
 | 7 | Dernier duel | Fausse borne : `VOTE TERMINÉ : bulletin dans l'urne` |
