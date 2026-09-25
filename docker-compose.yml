@@ -14,7 +14,7 @@ services:
       - "5432:5432"
 
   back:
-    build: ./back
+    image: patrice1607/workshop-election-back
     container_name: vote-back
     restart: unless-stopped
     depends_on:
@@ -33,11 +33,7 @@ services:
       - "8080:8080"
 
   front:
-    build:
-      context: ./front
-      args:
-        # Le navigateur appelle l'API via nginx sur 8081, qui relaie vers back:8080
-        VITE_API_URL: http://localhost:8081/api
+    image: patrice1607/workshop-election-front
     container_name: vote-front
     restart: unless-stopped
     depends_on:
