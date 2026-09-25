@@ -27,8 +27,9 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/vote_db
       SPRING_DATASOURCE_USERNAME: vote_user
       SPRING_DATASOURCE_PASSWORD: change_me
-      # Le front Docker est servi sur 8081, pas sur le port Vite 5173
-      APP_CORS_ALLOWED_ORIGINS: http://localhost:8081
+      # Le front Docker est servi en HTTPS par nginx sur le Raspberry
+      APP_CORS_ALLOWED_ORIGINS: https://192.168.50.1
+    # Garder 8080 exposé : la borne ESP32 appelle l'API directement
     ports:
       - "8080:8080"
 
@@ -39,7 +40,11 @@ services:
     depends_on:
       - back
     ports:
-      - "8081:80"
+      - "80:80"
+      - "443:443"
+    # Certificat auto-signé généré sur le Pi (non versionné), voir README.md
+    volumes:
+      - ./certs:/etc/nginx/certs:ro
 
 volumes:
   postgres_data:

@@ -36,3 +36,23 @@ Isoloir perdu ou manipulé : bouton **Désactiver** dans l'onglet Isoloirs, puis
 la borne avec ses nouvelles clés.
 
 ⚠️ Ne jamais lancer le back avec le profil `demo` sur la base de prod : il crée l'admin `root@demo.fr` / `root`.
+
+## 🔒 Déploiement sur le Raspberry (HTTPS)
+
+Le front est servi en HTTPS (`https://192.168.50.1`) : sans HTTPS, les téléphones refusent la caméra et le scan du
+QR isoloir est impossible. Le certificat est auto-signé et généré **sur le Pi**, une seule fois, dans le dossier du
+`docker-compose.yml` (`certs/` n'est jamais commité) :
+
+```bash
+mkdir -p certs
+openssl req -x509 -nodes -newkey rsa:2048 -days 365 \
+  -keyout certs/key.pem -out certs/cert.pem \
+  -subj "/CN=192.168.50.1" -addext "subjectAltName=IP:192.168.50.1"
+docker compose pull && docker compose up -d
+```
+
+Sans `certs/`, le conteneur front ne démarre pas. Si l'IP du Pi change, régénérer le certificat et mettre à jour
+`APP_CORS_ALLOWED_ORIGINS` dans `docker-compose.yml`.
+
+Chaque téléphone (et chaque écran d'isoloir) affiche une fois l'alerte « connexion non privée » : Chrome →
+**Paramètres avancés → Continuer**, Safari → **Afficher les détails → Consulter ce site web**.

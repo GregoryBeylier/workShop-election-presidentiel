@@ -46,5 +46,6 @@ jobs:
           tags: |
             patrice1607/workshop-election-front:latest
             patrice1607/workshop-election-front:${{ github.sha }}
+          # VITE_API_URL vide : le front appelle /api sur sa propre origine (HTTPS), relayé par nginx
           build-args: |
-            VITE_API_URL=http://192.168.50.1:8080/api
+            VITE_API_URL=
