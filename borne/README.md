@@ -11,7 +11,7 @@ C'est le **canal A** de `Doc/infrastructure.md` : le vote qui garantit l'isoleme
 | Fichier | Pour qui | Contenu |
 |---|---|---|
 | **README.md** | tout le monde | Ce fichier : ce que fait la borne, son câblage, comment la flasher |
-| **[API.md](API.md)** | équipe backend, Léo | **Le contrat d'API à jour (v2)** : déverrouillage par le check-in QR de l'isoloir, clé de borne, routes `/api/borne/etat` et `/api/borne/choix`. Remplace ROUTES.md |
+| **[API.md](API.md)** | équipe backend, Léo | **Le contrat d'API à jour (v2)** : déverrouillage par le check-in (code à 6 chiffres) de l'isoloir, clé de borne, routes `/api/borne/etat` et `/api/borne/choix`. Remplace ROUTES.md |
 | **[LISTE-ROUTES.md](LISTE-ROUTES.md)** | équipe backend | **Le résumé** : toutes les routes dans un tableau, une phrase par route |
 | **[ROUTES.md](ROUTES.md)** | équipe backend, équipe front | **Les routes d'API à créer.** Formats JSON, codes HTTP, tables SQL, scénario de test en `curl` |
 | **[firmware/IsoloireBuzzer/IsoloireBuzzer.ino](firmware/IsoloireBuzzer/IsoloireBuzzer.ino)** | équipe embarquée, curieux | Le programme de référence, testé sur le câblage réel. Hors ligne |

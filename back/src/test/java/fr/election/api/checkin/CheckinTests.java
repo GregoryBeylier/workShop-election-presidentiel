@@ -77,7 +77,7 @@ class CheckinTests {
 
 	@Autowired HorlogeTest horloge;
 	@Autowired CheckinService checkinService;
-	@Autowired QrTokenService qrTokenService;
+	@Autowired CodeIsoloirService codeIsoloirService;
 	@Autowired JwtService jwtService;
 	@Autowired UtilisateurRepository utilisateurRepository;
 	@Autowired PeriodeVoteRepository periodeRepository;
@@ -196,8 +196,21 @@ class CheckinTests {
 		bulletinRepository.save(bulletin);
 	}
 
-	private String qr(Isoloir isoloir) {
-		return qrTokenService.generer(isoloir, horloge.instant()).payload();
+	private String code(Isoloir isoloir) {
+		return codeIsoloirService.generer(isoloir, horloge.instant()).code();
+	}
+
+	// Un code qui n'est celui d'aucun isoloir, ni maintenant ni à la fenêtre précédente
+	private String codeFaux() {
+		List<String> valides = new ArrayList<>();
+		for (Isoloir iso : List.of(isoloir1, isoloir2)) {
+			valides.add(code(iso));
+			valides.add(codeIsoloirService.generer(iso, horloge.instant().minusMillis(CodeIsoloirService.FENETRE_MS)).code());
+		}
+		for (int i = 0; ; i++) {
+			String candidat = String.format("%06d", i);
+			if (!valides.contains(candidat)) return candidat;
+		}
 	}
 
 	private String bearer(Utilisateur utilisateur) {
@@ -212,116 +225,126 @@ class CheckinTests {
 	void checkinValideRevoqueLeVoteEnLigne() {
 		assertThat(checkinService.statut(id(alice))).isEqualTo(StatutVotant.not_voted);
 
-		assertThat(checkinService.checkin(id(alice), qr(isoloir1)).status()).isEqualTo(ResultatCheckin.success);
+		assertThat(checkinService.checkin(id(alice), code(isoloir1)).status()).isEqualTo(ResultatCheckin.success);
 		assertThat(checkinService.statut(id(alice))).isEqualTo(StatutVotant.checked_in_isoloir);
 		assertThat(journalRepository.findByIdUtilisateur(id(alice))).extracting("resultat").containsExactly("success");
 	}
 
 	@Test
-	void qrDeLaFenetrePrecedenteAccepte() {
-		String token = qr(isoloir1);
-		horloge.avancer(QrTokenService.FENETRE_MS + 2_000);
-
-		assertThat(checkinService.checkin(id(alice), token).status()).isEqualTo(ResultatCheckin.success);
-	}
-
-	@Test
-	void qrPlusVieuxQueDeuxFenetresExpire() {
-		String token = qr(isoloir1);
-		horloge.avancer(2 * QrTokenService.FENETRE_MS);
-
-		assertThat(checkinService.checkin(id(alice), token).status()).isEqualTo(ResultatCheckin.expired_token);
-		assertThat(checkinService.statut(id(alice))).isEqualTo(StatutVotant.not_voted);
-	}
-
-	@Test
-	void qrFalsifieOuIllisibleRejete() {
-		String token = qr(isoloir1);
-		String autreIsoloir = token.replaceFirst("^CHK1\\.\\d+\\.", "CHK1." + isoloir2.getIdIsoloir() + ".");
-		String signatureAlteree = token.substring(0, token.length() - 1) + (token.endsWith("A") ? "B" : "A");
-
-		assertThat(checkinService.checkin(id(alice), autreIsoloir).status()).isEqualTo(ResultatCheckin.invalid_token);
-		assertThat(checkinService.checkin(id(alice), signatureAlteree).status()).isEqualTo(ResultatCheckin.invalid_token);
-		assertThat(checkinService.checkin(id(alice), "https://example.com").status()).isEqualTo(ResultatCheckin.invalid_token);
-		assertThat(checkinService.statut(id(alice))).isEqualTo(StatutVotant.not_voted);
-	}
-
-	@Test
-	void qrDuFuturRejete() {
-		horloge.avancer(2 * QrTokenService.FENETRE_MS);
-		String tokenFutur = qr(isoloir1);
-		horloge.regler(T0);
-
-		assertThat(checkinService.checkin(id(alice), tokenFutur).status()).isEqualTo(ResultatCheckin.invalid_token);
-	}
-
-	@Test
 	void dejaVoteEnLigneRejete() {
-		assertThat(checkinService.checkin(id(bob), qr(isoloir1)).status()).isEqualTo(ResultatCheckin.already_voted);
+		assertThat(checkinService.checkin(id(bob), code(isoloir1)).status()).isEqualTo(ResultatCheckin.already_voted);
 		assertThat(checkinService.statut(id(bob))).isEqualTo(StatutVotant.voted_app);
 	}
 
 	@Test
-	void doubleScanDansLeMemeIsoloirIdempotent() {
-		String token = qr(isoloir1);
+	void doubleEnvoiDansLeMemeIsoloirIdempotent() {
+		String code = code(isoloir1);
 
-		assertThat(checkinService.checkin(id(alice), token).status()).isEqualTo(ResultatCheckin.success);
-		assertThat(checkinService.checkin(id(alice), token).status()).isEqualTo(ResultatCheckin.success);
+		assertThat(checkinService.checkin(id(alice), code).status()).isEqualTo(ResultatCheckin.success);
+		assertThat(checkinService.checkin(id(alice), code).status()).isEqualTo(ResultatCheckin.success);
 		assertThat(emargementRepository.count()).isEqualTo(1);
 	}
 
 	@Test
-	void scanDansUnAutreIsoloirRejete() {
-		checkinService.checkin(id(alice), qr(isoloir1));
+	void checkinDansUnAutreIsoloirRejete() {
+		checkinService.checkin(id(alice), code(isoloir1));
 
-		assertThat(checkinService.checkin(id(alice), qr(isoloir2)).status()).isEqualTo(ResultatCheckin.already_voted);
+		assertThat(checkinService.checkin(id(alice), code(isoloir2)).status()).isEqualTo(ResultatCheckin.already_voted);
 		assertThat(emargementRepository.count()).isEqualTo(1);
 	}
 
 	@Test
 	void votantNonInscritRejete() {
 		assertThat(checkinService.statut(id(david))).isEqualTo(StatutVotant.not_registered);
-		assertThat(checkinService.checkin(id(david), qr(isoloir1)).status()).isEqualTo(ResultatCheckin.not_registered);
+		assertThat(checkinService.checkin(id(david), code(isoloir1)).status()).isEqualTo(ResultatCheckin.not_registered);
 	}
 
 	@Test
-	void scansSimultanesUnSeulEmargement() throws Exception {
-		String token1 = qr(isoloir1);
-		String token2 = qr(isoloir2);
-		List<Callable<ResultatCheckin>> scans = new ArrayList<>();
+	void checkinsSimultanesUnSeulEmargement() throws Exception {
+		String code1 = code(isoloir1);
+		String code2 = code(isoloir2);
+		List<Callable<ResultatCheckin>> envois = new ArrayList<>();
 		for (int i = 0; i < 10; i++) {
-			String token = i % 2 == 0 ? token1 : token2;
-			scans.add(() -> checkinService.checkin(id(chloe), token).status());
+			String code = i % 2 == 0 ? code1 : code2;
+			envois.add(() -> checkinService.checkin(id(chloe), code).status());
 		}
 
 		ExecutorService executor = Executors.newFixedThreadPool(10);
 		List<ResultatCheckin> resultats = new ArrayList<>();
-		for (Future<ResultatCheckin> f : executor.invokeAll(scans)) {
+		for (Future<ResultatCheckin> f : executor.invokeAll(envois)) {
 			resultats.add(f.get());
 		}
 		executor.shutdown();
 
 		assertThat(emargementRepository.count()).isEqualTo(1);
-		// Un seul isoloir gagne : ses scans réussissent, ceux de l'autre isoloir sont rejetés
+		// Un seul isoloir gagne : ses check-ins réussissent, ceux de l'autre isoloir sont rejetés
 		assertThat(resultats).containsOnly(ResultatCheckin.success, ResultatCheckin.already_voted);
 		assertThat(resultats).filteredOn(r -> r == ResultatCheckin.success).hasSize(5);
 	}
 
 	@Test
 	void posteSansLaBonneCleRefuse() throws Exception {
-		String url = "/api/booths/" + isoloir1.getIdIsoloir() + "/current-qr";
+		String url = "/api/booths/" + isoloir1.getIdIsoloir() + "/current-code";
 
 		mvc.perform(get(url)).andExpect(status().isUnauthorized());
 		mvc.perform(get(url).header("X-Isoloir-Cle", "cle-poste-2")).andExpect(status().isUnauthorized());
 		mvc.perform(get(url).header("X-Isoloir-Cle", "cle-poste-1"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.qr_payload").isString())
-			.andExpect(jsonPath("$.expires_in").value(10_000));
+			.andExpect(jsonPath("$.code").value(org.hamcrest.Matchers.matchesPattern("\\d{6}")))
+			.andExpect(jsonPath("$.expires_in").value(30_000));
+	}
+
+	@Test
+	void codeValideEmargeDansLeBonIsoloir() {
+		String code = code(isoloir2);
+		// Tapé avec un espace au milieu, comme il est affiché
+		assertThat(checkinService.checkin(id(alice), code.substring(0, 3) + " " + code.substring(3)).status())
+			.isEqualTo(ResultatCheckin.success);
+		assertThat(emargementRepository.findAll()).singleElement()
+			.extracting(e -> e.getIsoloir().getIdIsoloir()).isEqualTo(isoloir2.getIdIsoloir());
+	}
+
+	@Test
+	void codeDeLaFenetrePrecedenteAccepteMaisPasAvant() {
+		String code = code(isoloir1);
+		horloge.avancer(CodeIsoloirService.FENETRE_MS + 10_000);
+		assertThat(checkinService.checkin(id(alice), code).status()).isEqualTo(ResultatCheckin.success);
+
+		String codeChloe = code(isoloir2);
+		horloge.avancer(2 * CodeIsoloirService.FENETRE_MS);
+		assertThat(checkinService.checkin(id(chloe), codeChloe).status()).isEqualTo(ResultatCheckin.invalid_token);
+	}
+
+	@Test
+	void codeFauxOuIsoloirDesactiveRejete() {
+		assertThat(checkinService.checkin(id(alice), codeFaux()).status()).isEqualTo(ResultatCheckin.invalid_token);
+		assertThat(checkinService.checkin(id(alice), "12ab56").status()).isEqualTo(ResultatCheckin.invalid_token);
+
+		String code = code(isoloir1);
+		isoloir1.setActif(false);
+		isoloirRepository.save(isoloir1);
+		assertThat(checkinService.checkin(id(alice), code).status()).isEqualTo(ResultatCheckin.invalid_token);
+		assertThat(checkinService.statut(id(alice))).isEqualTo(StatutVotant.not_voted);
+	}
+
+	@Test
+	void checkinBloqueApresTropDeCodesFaux() {
+		for (int i = 0; i < CheckinService.MAX_ECHECS_CODE; i++) {
+			assertThat(checkinService.checkin(id(alice), codeFaux()).status()).isEqualTo(ResultatCheckin.invalid_token);
+		}
+		// Même le bon code est refusé tant que la limite court
+		assertThat(checkinService.checkin(id(alice), code(isoloir1)).status())
+			.isEqualTo(ResultatCheckin.too_many_attempts);
+		// Les autres votants ne sont pas touchés
+		assertThat(checkinService.checkin(id(chloe), code(isoloir1)).status()).isEqualTo(ResultatCheckin.success);
+
+		horloge.avancer(CheckinService.DELAI_ECHECS_CODE.toMillis() + 1_000);
+		assertThat(checkinService.checkin(id(alice), code(isoloir2)).status()).isEqualTo(ResultatCheckin.success);
 	}
 
 	@Test
 	void checkinExigeUnJwt() throws Exception {
-		String body = "{\"qr_token\":\"" + qr(isoloir1) + "\"}";
+		String body = "{\"code\":\"" + code(isoloir1) + "\"}";
 
 		// L'ancien header du prototype ne sert plus à rien
 		mvc.perform(post("/api/checkin").header("X-User-Id", id(alice)).contentType(MediaType.APPLICATION_JSON).content(body))
@@ -335,7 +358,7 @@ class CheckinTests {
 
 	@Test
 	void parcoursHttpAvecJwt() throws Exception {
-		String body = "{\"qr_token\":\"" + qr(isoloir1) + "\"}";
+		String body = "{\"code\":\"" + code(isoloir1) + "\"}";
 
 		mvc.perform(post("/api/checkin").header("Authorization", bearer(alice))
 				.contentType(MediaType.APPLICATION_JSON).content(body))
@@ -353,7 +376,7 @@ class CheckinTests {
 		assertThat(checkinService.commencerVoteEnLigne(id(alice)).status()).isEqualTo(ResultatVoteEnLigne.success);
 
 		assertThat(checkinService.statut(id(alice))).isEqualTo(StatutVotant.voted_app);
-		assertThat(checkinService.checkin(id(alice), qr(isoloir1)).status()).isEqualTo(ResultatCheckin.already_voted);
+		assertThat(checkinService.checkin(id(alice), code(isoloir1)).status()).isEqualTo(ResultatCheckin.already_voted);
 		assertThat(emargementRepository.count()).isZero();
 	}
 
@@ -369,7 +392,7 @@ class CheckinTests {
 	@Test
 	void isoloirBloqueLeVoteEnLigne() {
 		long bulletinsAvant = bulletinRepository.count();
-		checkinService.checkin(id(alice), qr(isoloir1));
+		checkinService.checkin(id(alice), code(isoloir1));
 
 		assertThat(checkinService.commencerVoteEnLigne(id(alice)).status()).isEqualTo(ResultatVoteEnLigne.checked_in_isoloir);
 		assertThat(bulletinRepository.count()).isEqualTo(bulletinsAvant);
@@ -384,11 +407,11 @@ class CheckinTests {
 	@Test
 	void clicEnLigneEtScanSimultanesUnSeulGagne() throws Exception {
 		long bulletinsAvant = bulletinRepository.count();
-		String token = qr(isoloir1);
+		String code = code(isoloir1);
 		List<Callable<Object>> actions = new ArrayList<>();
 		for (int i = 0; i < 10; i++) {
 			actions.add(i % 2 == 0
-					? () -> checkinService.checkin(id(chloe), token).status()
+					? () -> checkinService.checkin(id(chloe), code).status()
 					: () -> checkinService.commencerVoteEnLigne(id(chloe)).status());
 		}
 
@@ -416,7 +439,7 @@ class CheckinTests {
 
 	@Test
 	void voteEnLigneRefuseApresCheckin() {
-		checkinService.checkin(id(alice), qr(isoloir1));
+		checkinService.checkin(id(alice), code(isoloir1));
 
 		// Même en appelant directement l'API de vote, sans passer par « Commencer »
 		assertThatThrownBy(() -> voterEnLigne(alice))
@@ -430,16 +453,16 @@ class CheckinTests {
 		voterEnLigne(alice);
 
 		assertThat(ligneVoteRepository.count()).isEqualTo(1);
-		assertThat(checkinService.checkin(id(alice), qr(isoloir1)).status()).isEqualTo(ResultatCheckin.already_voted);
+		assertThat(checkinService.checkin(id(alice), code(isoloir1)).status()).isEqualTo(ResultatCheckin.already_voted);
 	}
 
 	@Test
 	void voteEnLigneEtScanSimultanesJamaisLesDeux() throws Exception {
-		String token = qr(isoloir1);
+		String code = code(isoloir1);
 		List<Callable<Object>> actions = new ArrayList<>();
 		for (int i = 0; i < 10; i++) {
 			actions.add(i % 2 == 0
-					? () -> checkinService.checkin(id(chloe), token).status()
+					? () -> checkinService.checkin(id(chloe), code).status()
 					: () -> {
 						try {
 							voterEnLigne(chloe);
@@ -464,7 +487,7 @@ class CheckinTests {
 
 	@Test
 	void apiDeVoteRefuseApresCheckin() throws Exception {
-		checkinService.checkin(id(alice), qr(isoloir1));
+		checkinService.checkin(id(alice), code(isoloir1));
 
 		mvc.perform(post("/api/vote/" + duel.getIdAffrontement()).header("Authorization", bearer(alice))
 				.contentType(MediaType.APPLICATION_JSON)
@@ -500,7 +523,7 @@ class CheckinTests {
 	void borneEnLigneOuvreLeVote() {
 		brancherBorne(isoloir1, 3);
 
-		assertThat(checkinService.checkin(id(alice), qr(isoloir1)).status()).isEqualTo(ResultatCheckin.success);
+		assertThat(checkinService.checkin(id(alice), code(isoloir1)).status()).isEqualTo(ResultatCheckin.success);
 		assertThat(checkinService.statut(id(alice))).isEqualTo(StatutVotant.checked_in_isoloir);
 		assertThat(emargementRepository.existsVoteOuvert(isoloir1.getIdIsoloir())).isTrue();
 	}
@@ -508,12 +531,12 @@ class CheckinTests {
 	@Test
 	void borneHorsLigneRefuse() {
 		brancherBorne(isoloir1, CheckinService.DELAI_BORNE_EN_LIGNE.toSeconds() + 1);
-		assertThat(checkinService.checkin(id(alice), qr(isoloir1)).status()).isEqualTo(ResultatCheckin.booth_offline);
+		assertThat(checkinService.checkin(id(alice), code(isoloir1)).status()).isEqualTo(ResultatCheckin.booth_offline);
 
 		// Borne qui n'a jamais appelé le serveur
 		isoloir1.setDerniereActiviteBorne(null);
 		isoloirRepository.save(isoloir1);
-		assertThat(checkinService.checkin(id(alice), qr(isoloir1)).status()).isEqualTo(ResultatCheckin.booth_offline);
+		assertThat(checkinService.checkin(id(alice), code(isoloir1)).status()).isEqualTo(ResultatCheckin.booth_offline);
 
 		assertThat(emargementRepository.count()).isZero();
 		assertThat(checkinService.statut(id(alice))).isEqualTo(StatutVotant.not_voted);
@@ -522,42 +545,42 @@ class CheckinTests {
 	@Test
 	void borneOccupeeJusquAuBulletin() {
 		brancherBorne(isoloir1, 1);
-		checkinService.checkin(id(alice), qr(isoloir1));
+		checkinService.checkin(id(alice), code(isoloir1));
 
-		assertThat(checkinService.checkin(id(chloe), qr(isoloir1)).status()).isEqualTo(ResultatCheckin.booth_busy);
+		assertThat(checkinService.checkin(id(chloe), code(isoloir1)).status()).isEqualTo(ResultatCheckin.booth_busy);
 		assertThat(checkinService.statut(id(chloe))).isEqualTo(StatutVotant.not_voted);
 
 		// La borne a fini le vote d'Alice : elle se libère
 		terminerVoteSurBorne(alice);
 		assertThat(checkinService.statut(id(alice))).isEqualTo(StatutVotant.voted_booth);
-		assertThat(checkinService.checkin(id(chloe), qr(isoloir1)).status()).isEqualTo(ResultatCheckin.success);
+		assertThat(checkinService.checkin(id(chloe), code(isoloir1)).status()).isEqualTo(ResultatCheckin.success);
 	}
 
 	@Test
 	void apresLeVoteSurLaBorneNouveauScanRefuse() {
 		brancherBorne(isoloir1, 1);
-		checkinService.checkin(id(alice), qr(isoloir1));
+		checkinService.checkin(id(alice), code(isoloir1));
 		terminerVoteSurBorne(alice);
 
-		assertThat(checkinService.checkin(id(alice), qr(isoloir1)).status()).isEqualTo(ResultatCheckin.already_voted);
-		assertThat(checkinService.checkin(id(alice), qr(isoloir2)).status()).isEqualTo(ResultatCheckin.already_voted);
+		assertThat(checkinService.checkin(id(alice), code(isoloir1)).status()).isEqualTo(ResultatCheckin.already_voted);
+		assertThat(checkinService.checkin(id(alice), code(isoloir2)).status()).isEqualTo(ResultatCheckin.already_voted);
 		assertThat(checkinService.statut(id(alice))).isEqualTo(StatutVotant.voted_booth);
 	}
 
 	@Test
 	void votantsSimultanesSurLaMemeBorneUnSeulPasse() throws Exception {
 		brancherBorne(isoloir1, 1);
-		String token = qr(isoloir1);
-		List<Callable<ResultatCheckin>> scans = new ArrayList<>();
+		String code = code(isoloir1);
+		List<Callable<ResultatCheckin>> envois = new ArrayList<>();
 		for (int i = 0; i < 10; i++) {
 			Utilisateur votant = utilisateur("votant" + i);
 			inscrire(votant, candidat1.getPeriode());
-			scans.add(() -> checkinService.checkin(id(votant), token).status());
+			envois.add(() -> checkinService.checkin(id(votant), code).status());
 		}
 
 		ExecutorService executor = Executors.newFixedThreadPool(10);
 		List<ResultatCheckin> resultats = new ArrayList<>();
-		for (Future<ResultatCheckin> f : executor.invokeAll(scans)) {
+		for (Future<ResultatCheckin> f : executor.invokeAll(envois)) {
 			resultats.add(f.get());
 		}
 		executor.shutdown();
@@ -579,7 +602,7 @@ class CheckinTests {
 		assertThat(isoloir.getCleBorneHash()).isEqualTo(IsoloirService.sha256Hex(cree.cleBorne()));
 		assertThat(isoloirAdminService.creer("Isoloir 4").cleEcran()).isNotEqualTo(cree.cleEcran());
 
-		mvc.perform(get("/api/booths/" + cree.id() + "/current-qr").header("X-Isoloir-Cle", cree.cleEcran()))
+		mvc.perform(get("/api/booths/" + cree.id() + "/current-code").header("X-Isoloir-Cle", cree.cleEcran()))
 			.andExpect(status().isOk());
 		// Nouvelle borne qui n'a encore jamais appelé : hors ligne
 		assertThat(isoloirAdminService.lister()).filteredOn(i -> i.id().equals(cree.id()))
@@ -592,7 +615,7 @@ class CheckinTests {
 	@Test
 	void listeDesIsoloirsSuitLaBorne() {
 		brancherBorne(isoloir1, 2);
-		checkinService.checkin(id(alice), qr(isoloir1));
+		checkinService.checkin(id(alice), code(isoloir1));
 
 		assertThat(isoloirAdminService.lister()).filteredOn(i -> i.id().equals(isoloir1.getIdIsoloir()))
 			.singleElement().satisfies(i -> {
@@ -602,11 +625,11 @@ class CheckinTests {
 	}
 
 	@Test
-	void isoloirDesactiveRefuseLeScan() {
-		String token = qr(isoloir1);
+	void isoloirDesactiveRefuseLeCode() {
+		String code = code(isoloir1);
 		isoloirAdminService.desactiver(isoloir1.getIdIsoloir());
 
-		assertThat(checkinService.checkin(id(alice), token).status()).isEqualTo(ResultatCheckin.invalid_token);
+		assertThat(checkinService.checkin(id(alice), code).status()).isEqualTo(ResultatCheckin.invalid_token);
 	}
 
 	@Test

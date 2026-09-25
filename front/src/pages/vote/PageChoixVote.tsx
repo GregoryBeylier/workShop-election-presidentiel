@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { QrCode, Smartphone } from "lucide-react";
+import { Hash, Smartphone } from "lucide-react";
 import { useStatutVotant } from "../../hooks/useStatutVotant";
 import Alerte from "../../components/ui/Alerte";
 import MessagePage from "../../components/ui/MessagePage";
@@ -8,7 +8,7 @@ import VoteTermine from "./VoteTermine";
 
 /**
  * Point d'entrée de l'onglet "Voter" : l'électeur choisit de voter en ligne
- * (les duels) ou à l'isoloir (scan du QR puis vote sur la borne). Le choix est
+ * (les duels) ou à l'isoloir (code de l'isoloir puis vote sur la borne). Le choix est
  * confirmé sur la page suivante ; on ne peut pas faire les deux.
  */
 function PageChoixVote() {
@@ -74,9 +74,9 @@ function PageChoixVote() {
           />
 
           <CarteChoix
-            icon={QrCode}
+            icon={Hash}
             titre="Voter à l'isoloir"
-            description="Dans l'isoloir, scannez le QR code affiché à l'écran, puis votez avec les boutons de la borne."
+            description="Dans l'isoloir, tapez le code affiché à l'écran, puis votez avec les boutons de la borne."
             raisonIndisponible={
               statut === "voted_app"
                 ? "Vous avez déjà commencé à voter en ligne : le vote à l'isoloir n'est plus possible."
@@ -104,7 +104,7 @@ function CarteChoix({
   raisonIndisponible,
   action,
 }: {
-  icon: typeof QrCode;
+  icon: typeof Hash;
   titre: string;
   description: string;
   raisonIndisponible?: string;

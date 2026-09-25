@@ -4,6 +4,12 @@ Ce que protège le système, comment il le fait, et les failles qui restent. Tou
 `back/src/main/java/fr/election/api/checkin/`, `front/src/pages/vote/`, `front/src/pages/isoloir/`, et le contrat
 de la borne dans [borne/API.md](../borne/API.md).
 
+> ⚠️ **Mise à jour : le QR a été remplacé par un code à 6 chiffres.** L'écran de l'isoloir affiche un code qui change
+> toutes les 30 s, que le votant tape dans l'appli (`POST /api/checkin { code }`) : plus besoin de caméra ni de HTTPS.
+> Le principe reste le même (HMAC avec la clé de l'isoloir, vérifié par le serveur) : voir
+> [la section sur le code](#le-code-à-6-chiffres-remplace-le-qr). Le reste du document décrit encore le QR : partout où
+> il dit « QR » ou « scan », lire « code » (`CodeIsoloirService` a remplacé `QrTokenService`).
+
 **Sommaire** : [L'enjeu](#1-lenjeu) · [Les deux modes](#2-les-deux-modes) · [Les attaquants](#3-les-attaquants) ·
 [Anatomie d'un QR](#4-anatomie-dun-qr) · [Les 8 protections](#5-les-8-protections) · [Parcours d'un vote à l'isoloir](#6-parcours-dun-vote-à-lisoloir) ·
 [Attaque par attaque](#7-attaque-par-attaque) · [Failles restantes](#8-failles-restantes) · [Avant le jour J](#9-avant-le-jour-j) · [Quiz](#10-quiz)
@@ -184,6 +190,22 @@ coupure Wi-Fi **n'est pas compté deux fois**.
   (autant de lignes que de duels). Ça protège aussi le vote en ligne, qui écrit ses lignes duel par duel.
 
 > Code : `LigneVoteRepository.findCompletesByPeriode`. Test : `voteIncompletNeCompteDansLesResultats`.
+
+### Le code à 6 chiffres (remplace le QR)
+*Le même tampon, recopié à la main.*
+
+L'écran affiche un **code à 6 chiffres** qui change toutes les 30 s. Le votant le tape dans l'appli
+(`POST /api/checkin`), et le serveur fait ensuite les mêmes vérifications qu'avec l'ancien QR. Contrairement au QR,
+il ne demande pas la caméra, donc pas de HTTPS : le site peut rester en `http://`.
+
+- Le code est calculé comme un code d'authentification à deux facteurs (TOTP) : HMAC-SHA256 de
+  `CODE:{id_isoloir}:{fenêtre de 30 s}` avec la clé de l'isoloir. Sans la clé, impossible de le prévoir.
+- Accepté pendant sa fenêtre et la suivante (30 à 60 s). Le votant ne tape que le code : le serveur retrouve l'isoloir.
+- **Limite d'essais** : 5 codes faux en 5 min par votant, puis refus (`too_many_attempts`). Un code tapé au hasard a environ 2 × (nombre d'isoloirs) chances sur 1 000 000
+  de tomber juste (fenêtre courante et précédente) : hors de portée avec 5 essais.
+- **Faiblesse par rapport à l'ancien QR** : un code se dicte au téléphone plus facilement qu'un QR ne se photographie. Quelqu'un
+  dans l'isoloir peut donc le lire à un complice dehors, qui a 30 à 60 s pour le taper. Même parade que pour un QR
+  filmé : la borne n'ouvre qu'un vote à la fois (`booth_busy`), et l'assesseur voit qui entre dans l'isoloir.
 
 ## 6. Parcours d'un vote à l'isoloir
 

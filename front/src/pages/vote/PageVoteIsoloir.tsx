@@ -1,14 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { QrCode } from "lucide-react";
+import { KeyRound } from "lucide-react";
 import { ApiError } from "../../api/client";
 import { checkin, getStatutVotant } from "../../api/checkin";
 import { useStatutVotant } from "../../hooks/useStatutVotant";
 import Alerte, { type Message } from "../../components/ui/Alerte";
 import Bouton from "../../components/ui/Bouton";
+import Champ from "../../components/ui/Champ";
 import MessagePage from "../../components/ui/MessagePage";
 import AvertissementChoix from "./AvertissementChoix";
-import ScannerQr from "./ScannerQr";
 import VoteTermine from "./VoteTermine";
 
 const MESSAGE_RESEAU =
@@ -18,13 +18,13 @@ const MESSAGE_RESEAU =
 const INTERVALLE_SUIVI_MS = 2000;
 
 /**
- * Check-in isoloir : l'électeur scanne le QR affiché dans l'isoloir, ce qui ouvre son vote
- * sur la borne et révoque définitivement son vote en ligne. La page suit ensuite le vote
+ * Check-in isoloir : l'électeur tape le code à 6 chiffres affiché sur l'écran de l'isoloir, ce qui ouvre
+ * son vote sur la borne et révoque définitivement son vote en ligne. La page suit ensuite le vote
  * jusqu'à ce que la borne ait enregistré le bulletin. On y arrive depuis /vote.
  */
 function PageVoteIsoloir() {
   const { statut, erreur, setStatut } = useStatutVotant();
-  const [scanEnCours, setScanEnCours] = useState(false);
+  const [code, setCode] = useState("");
   const [envoi, setEnvoi] = useState(false);
   const [message, setMessage] = useState<Message | null>(null);
 
@@ -42,12 +42,12 @@ function PageVoteIsoloir() {
     return () => clearInterval(id);
   }, [statut, setStatut]);
 
-  const handleScan = async (qrToken: string) => {
-    setScanEnCours(false);
+  const envoyerCode = async (e: FormEvent) => {
+    e.preventDefault();
     setEnvoi(true);
     setMessage(null);
     try {
-      const res = await checkin(qrToken);
+      const res = await checkin(code);
       if (res.status === "success") {
         setStatut("checked_in_isoloir");
       } else {
@@ -57,19 +57,15 @@ function PageVoteIsoloir() {
         if (res.status === "not_registered") setStatut("not_registered");
       }
     } catch (e) {
-      // Aucun état n'a changé côté serveur : on peut simplement relancer le scan
+      // Aucun état n'a changé côté serveur : on peut simplement retaper le code
       setMessage({
         type: "erreur",
         texte: e instanceof ApiError && e.status === 0 ? MESSAGE_RESEAU : "Une erreur est survenue, réessayez.",
       });
     } finally {
+      setCode("");
       setEnvoi(false);
     }
-  };
-
-  const lancerScan = () => {
-    setMessage(null);
-    setScanEnCours(true);
   };
 
   if (statut === "voted_booth") {
@@ -83,7 +79,7 @@ function PageVoteIsoloir() {
 
         {statut === "not_voted" && (
           <AvertissementChoix>
-            En scannant le QR de l'isoloir, vous renoncez <b>définitivement</b> au vote en ligne.
+            En validant le code de l'isoloir, vous renoncez <b>définitivement</b> au vote en ligne.
           </AvertissementChoix>
         )}
 
@@ -92,21 +88,27 @@ function PageVoteIsoloir() {
         {statut === null && !erreur && <MessagePage texte="Chargement…" />}
         {erreur && <Alerte message={{ type: "erreur", texte: MESSAGE_RESEAU }} />}
 
-        {statut === "not_voted" &&
-          (scanEnCours ? (
-            <ScannerQr onScan={handleScan} onCancel={() => setScanEnCours(false)} />
-          ) : envoi ? (
-            <p className="text-center text-gray-500">Vérification…</p>
-          ) : (
-            <>
-              <p className="text-gray-600">
-                Scannez le QR code affiché sur l'écran de l'isoloir, puis votez sur la borne.
-              </p>
-              <Bouton onClick={lancerScan} className="py-3 text-base">
-                <QrCode size={20} /> {message ? "Relancer le scan" : "Scanner le QR de l'isoloir"}
-              </Bouton>
-            </>
-          ))}
+        {statut === "not_voted" && (
+          <form onSubmit={envoyerCode} className="flex flex-col gap-4">
+            <p className="text-gray-600">
+              Tapez le code affiché sur l'écran de l'isoloir, puis votez sur la borne.
+            </p>
+            <Champ
+              label="Code de l'isoloir"
+              id="code-isoloir"
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="123456"
+              disabled={envoi}
+              aide="Le code change toutes les 30 secondes : tapez celui affiché en ce moment."
+            />
+            <Bouton type="submit" disabled={envoi || code.length !== 6} className="py-3 text-base">
+              <KeyRound size={20} /> {envoi ? "Vérification…" : "Valider le code"}
+            </Bouton>
+          </form>
+        )}
 
         {statut === "checked_in_isoloir" && <InstructionsBorne />}
 

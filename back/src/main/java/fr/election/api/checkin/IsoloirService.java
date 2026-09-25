@@ -12,26 +12,26 @@ import org.springframework.web.server.ResponseStatusException;
 
 import fr.election.api.model.Isoloir;
 import fr.election.api.repository.IsoloirRepository;
-import fr.election.api.checkin.QrTokenService.QrCourant;
+import fr.election.api.checkin.CodeIsoloirService.CodeCourant;
 
 @Service
 public class IsoloirService {
 
 	private final IsoloirRepository isoloirRepository;
-	private final QrTokenService qrTokenService;
+	private final CodeIsoloirService codeIsoloirService;
 	private final Clock clock;
 
-	public IsoloirService(IsoloirRepository isoloirRepository, QrTokenService qrTokenService, Clock clock) {
+	public IsoloirService(IsoloirRepository isoloirRepository, CodeIsoloirService codeIsoloirService, Clock clock) {
 		this.isoloirRepository = isoloirRepository;
-		this.qrTokenService = qrTokenService;
+		this.codeIsoloirService = codeIsoloirService;
 		this.clock = clock;
 	}
 
 	/**
-	 * QR à afficher sur la tablette. Réservé à la tablette de l'isoloir (clé tablette) :
-	 * sans ça, n'importe qui pourrait récupérer le QR courant depuis chez lui et émarger à distance.
+	 * Code à afficher sur la tablette. Réservé à la tablette de l'isoloir (clé tablette) :
+	 * sans ça, n'importe qui pourrait récupérer le code courant depuis chez lui et émarger à distance.
 	 */
-	public QrCourant qrCourant(Integer idIsoloir, String cleTablette) {
+	public CodeCourant codeCourant(Integer idIsoloir, String cleTablette) {
 		Isoloir isoloir = isoloirRepository.findById(idIsoloir)
 			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Isoloir inconnu"));
 
@@ -44,7 +44,7 @@ public class IsoloirService {
 			throw new ResponseStatusException(HttpStatus.CONFLICT, "Isoloir désactivé");
 		}
 
-		return qrTokenService.generer(isoloir, clock.instant());
+		return codeIsoloirService.generer(isoloir, clock.instant());
 	}
 
 	public static String sha256Hex(String valeur) {

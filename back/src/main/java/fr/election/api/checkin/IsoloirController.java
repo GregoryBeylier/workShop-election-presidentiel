@@ -8,14 +8,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import fr.election.api.checkin.QrTokenService.QrCourant;
+import fr.election.api.checkin.CodeIsoloirService.CodeCourant;
 
 // Route publique (pas de JWT) : le poste isoloir s'authentifie avec sa propre clé, voir SecurityConfig
 @RestController
 @RequestMapping("/api/booths")
 public class IsoloirController {
 
-	public record QrCourantDto(@JsonProperty("qr_payload") String qrPayload, @JsonProperty("expires_in") long expiresIn) {}
+	public record CodeCourantDto(@JsonProperty("code") String code, @JsonProperty("expires_in") long expiresIn) {}
 
 	private final IsoloirService isoloirService;
 
@@ -24,11 +24,11 @@ public class IsoloirController {
 	}
 
 	// Appelé chaque seconde par le poste isoloir
-	@GetMapping("/{id}/current-qr")
-	public QrCourantDto currentQr(@PathVariable Integer id,
+	@GetMapping("/{id}/current-code")
+	public CodeCourantDto currentCode(@PathVariable Integer id,
 			@RequestHeader(name = "X-Isoloir-Cle", required = false) String cleTablette) {
-		QrCourant qr = isoloirService.qrCourant(id, cleTablette);
-		return new QrCourantDto(qr.payload(), qr.expireDansMs());
+		CodeCourant code = isoloirService.codeCourant(id, cleTablette);
+		return new CodeCourantDto(code.code(), code.expireDansMs());
 	}
 
 }

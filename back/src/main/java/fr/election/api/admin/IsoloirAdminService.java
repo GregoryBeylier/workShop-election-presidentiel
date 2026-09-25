@@ -19,7 +19,7 @@ import fr.election.api.model.Isoloir;
 import fr.election.api.repository.EmargementIsoloirRepository;
 import fr.election.api.repository.IsoloirRepository;
 
-// Back office des isoloirs (écran QR + borne ESP32) : création avec ses clés, suivi, désactivation
+// Back office des isoloirs (écran du code + borne ESP32) : création avec ses clés, suivi, désactivation
 @Service
 public class IsoloirAdminService {
 
@@ -48,7 +48,7 @@ public class IsoloirAdminService {
 	}
 
 	/**
-	 * Crée un isoloir avec trois secrets tirés au hasard : la clé qui signe ses QR (reste dans la base),
+	 * Crée un isoloir avec trois secrets tirés au hasard : la clé qui calcule ses codes (reste dans la base),
 	 * la clé de l'écran et la clé de la borne (renvoyées une seule fois, la base n'en garde que l'empreinte).
 	 */
 	@Transactional
@@ -66,7 +66,7 @@ public class IsoloirAdminService {
 		return new IsoloirCreeDto(isoloir.getIdIsoloir(), isoloir.getLibelle(), cleEcran, cleBorne);
 	}
 
-	// Écran ou borne perdu / manipulé : ses QR et sa borne sont refusés tout de suite. On en crée un autre.
+	// Écran ou borne perdu / manipulé : ses codes et sa borne sont refusés tout de suite. On en crée un autre.
 	@Transactional
 	public void desactiver(Integer idIsoloir) {
 		Isoloir isoloir = isoloirRepository.findById(idIsoloir)

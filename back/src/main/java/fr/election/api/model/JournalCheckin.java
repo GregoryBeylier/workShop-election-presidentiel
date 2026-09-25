@@ -9,7 +9,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-// Trace de chaque scan, pour audit / debug uniquement (jamais utilisée pour le résultat du vote)
+// Trace de chaque check-in, pour audit / debug uniquement (jamais utilisée pour le résultat du vote)
 @Entity
 @Table(name = "journal_checkin")
 public class JournalCheckin {
@@ -22,7 +22,7 @@ public class JournalCheckin {
 	@Column(name = "id_utilisateur")
 	private Integer idUtilisateur;
 
-	// null si le QR ne désignait aucun isoloir valide
+	// null si le code ne désignait aucun isoloir valide
 	@Column(name = "id_isoloir")
 	private Integer idIsoloir;
 
