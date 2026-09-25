@@ -75,6 +75,7 @@ autre appareil) : **Borne en ligne**, **Libre**.
 | Plus de vote en ligne après le scan | Après le scan, Emma retourne dans **Voter** | La carte « Voter en ligne » est grisée |
 | La borne doit être en ligne | Arrêter la fausse borne (Ctrl+C), attendre 10 s, scanner | « La borne de cet isoloir est hors ligne » |
 | Un vote interrompu ne compte pas | Arrêter la fausse borne au milieu des duels, puis la relancer | Elle reprend au bon duel ; rien n'est compté avant le dernier |
+| Débloquer un vote | Pendant un vote, **Admin → Isoloirs** → **Recommencer** ou **Annuler le vote**, puis un bouton dans la fausse borne | Recommencer : retour au duel 1. Annuler : la borne redevient libre, Emma peut rescanner |
 
 ## 5. Recommencer une démo
 

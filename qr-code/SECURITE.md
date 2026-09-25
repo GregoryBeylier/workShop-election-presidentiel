@@ -306,13 +306,15 @@ du profil `demo` sont sur GitHub.
 **Correction** : ne jamais les utiliser en prod. Deux clés aléatoires par isoloir, une pour l'écran et une pour la borne
 (`openssl rand -hex 24`), et **jamais** le profil `demo` sur la base de prod. Voir le [README à la racine](../README.md).
 
-### 🟠 À décider : un vote jamais terminé bloque la borne
+### 🟠 Organisation : un vote jamais terminé bloque la borne
 Si un votant quitte l'isoloir en plein vote, ou si la borne tombe en panne, son vote reste ouvert : la borne reste
-occupée pour les suivants, et le votant ne peut plus voter ailleurs. Rien n'est compté à tort (voir [§5.8](#58-un-vote-incomplet-ne-compte-jamais)),
-mais c'est un blocage.
+occupée pour les suivants. Rien n'est compté à tort (voir [§5.8](#58-un-vote-incomplet-ne-compte-jamais)).
 
-**Correction, à décider** : une procédure avec un assesseur, ou une expiration automatique qui efface les choix
-provisoires et libère la borne.
+**Correction en place** : un admin le débloque depuis **Admin → Isoloirs**, qui montre qui vote et à quel duel.
+**Recommencer** efface les choix (la borne repart au premier duel) ; **Annuler le vote** efface aussi l'émargement
+(le votant redevient « n'a pas voté »). Un vote terminé n'est jamais touché : les deux actions prennent le même
+verrou que la borne et refusent dès qu'un bulletin existe. Chaque action est tracée dans les logs du back avec
+l'admin qui l'a faite. Reste une question d'organisation : qui a le droit d'appuyer, et sur quel constat.
 
 ### 🟠 À discuter : le vote n'est pas secret dans la base
 Chaque choix de duel (`ligne_vote`) remonte à l'électeur par `bulletin → inscription → utilisateur`, en ligne comme sur
@@ -351,7 +353,8 @@ jamais ces valeurs dans un message ou sur GitHub.
 - [x] Le scan ouvre le vote sur la borne (en ligne et libre), testé avec un faux bulletin SQL.
 - [ ] Colonnes de la borne créées sur la base de prod (étape 1b de `sql/guide-neon.sql`).
 - [ ] Routes `/api/borne` écrites et relues (autre équipe), firmware à jour (Léo), test de bout en bout avec la vraie borne.
-- [ ] Décision sur les votes jamais terminés (assesseur ou expiration).
+- [x] Débloquer un vote jamais terminé depuis l'admin (Recommencer / Annuler le vote).
+- [ ] Qui a le droit d'annuler un vote le jour J, et sur quel constat.
 - [ ] Limite d'essais à la connexion.
 - [ ] nginx en HTTPS avec un vrai certificat, proxy `/api`, CORS réglé.
 - [ ] docker-compose : seul le front exposé, secrets dans un `.env`.

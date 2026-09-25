@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from "react";
-import { Ban, Plus } from "lucide-react";
+import { Ban, Plus, RotateCcw, XCircle } from "lucide-react";
 import {
+  annulerVoteIsoloir,
   creerIsoloir,
   desactiverIsoloir,
   getIsoloirs,
+  recommencerVoteIsoloir,
   type IsoloirAdmin,
   type IsoloirCree,
 } from "../../../api/admin";
@@ -21,8 +23,19 @@ const INTERVALLE_MS = 3000;
 
 /**
  * Onglet "Isoloirs" : un isoloir = un écran qui affiche le QR + une borne ESP32.
- * Création (avec ses clés), suivi des bornes en direct, désactivation.
+ * Création (avec ses clés), suivi des bornes en direct, désactivation, et reprise en main
+ * d'un vote bloqué sur une borne (recommencer ou annuler).
  */
+
+type ActionVote = { isoloir: IsoloirAdmin; action: "recommencer" | "annuler" };
+
+/** "2026-09-25T12:02:10" (UTC, sans fuseau) => "14:02" en heure locale */
+function heureLocale(isoUtc: string): string {
+  return new Date(`${isoUtc}Z`).toLocaleTimeString("fr-FR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 function OngletIsoloirs() {
   const {
     data: isoloirs,
@@ -33,6 +46,7 @@ function OngletIsoloirs() {
   const [enCours, setEnCours] = useState(false);
   const [cree, setCree] = useState<IsoloirCree | null>(null);
   const [aDesactiver, setADesactiver] = useState<IsoloirAdmin | null>(null);
+  const [actionVote, setActionVote] = useState<ActionVote | null>(null);
   const [message, setMessage] = useState<Message | null>(null);
 
   const libelleParDefaut = `Isoloir ${(isoloirs?.length ?? 0) + 1}`;
@@ -65,6 +79,31 @@ function OngletIsoloirs() {
       setMessage({ type: "erreur", texte: (err as Error).message });
     } finally {
       setADesactiver(null);
+    }
+  };
+
+  const confirmerActionVote = async () => {
+    if (!actionVote) return;
+    const { isoloir, action } = actionVote;
+    try {
+      if (action === "recommencer") {
+        await recommencerVoteIsoloir(isoloir.id);
+      } else {
+        await annulerVoteIsoloir(isoloir.id);
+      }
+      setMessage({
+        type: "succes",
+        texte:
+          action === "recommencer"
+            ? `${isoloir.libelle} : le vote repart du premier duel.`
+            : `${isoloir.libelle} : le vote est annulé, la borne est libre.`,
+      });
+      recharger();
+    } catch (err) {
+      setMessage({ type: "erreur", texte: (err as Error).message });
+      recharger();
+    } finally {
+      setActionVote(null);
     }
   };
 
@@ -110,37 +149,106 @@ function OngletIsoloirs() {
         ) : (
           <ul className="flex flex-col divide-y divide-gray-100">
             {isoloirs.map((i) => (
-              <li
-                key={i.id}
-                className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0">
-                  <p className="font-medium text-brand-dark">
-                    {i.libelle}{" "}
-                    <span className="text-sm font-normal text-gray-500">
-                      n° {i.id}
-                    </span>
-                  </p>
+              <li key={i.id} className="flex flex-col gap-3 py-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="font-medium text-brand-dark">
+                      {i.libelle}{" "}
+                      <span className="text-sm font-normal text-gray-500">
+                        n° {i.id}
+                      </span>
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <EtatIsoloir isoloir={i} />
+                    {i.actif && (
+                      <button
+                        type="button"
+                        onClick={() => setADesactiver(i)}
+                        title="Désactiver cet isoloir"
+                        aria-label={`Désactiver ${i.libelle}`}
+                        className="rounded-md p-2 text-gray-500 transition-colors duration-300 hover:bg-brand-pink/10 hover:text-brand-pink"
+                      >
+                        <Ban size={16} />
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <EtatIsoloir isoloir={i} />
-                  {i.actif && (
-                    <button
-                      type="button"
-                      onClick={() => setADesactiver(i)}
-                      title="Désactiver cet isoloir"
-                      aria-label={`Désactiver ${i.libelle}`}
-                      className="rounded-md p-2 text-gray-500 transition-colors duration-300 hover:bg-brand-pink/10 hover:text-brand-pink"
-                    >
-                      <Ban size={16} />
-                    </button>
-                  )}
-                </div>
+                {i.actif && i.vote && (
+                  <div className="flex flex-col gap-3 rounded-xl bg-brand-purple/5 p-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm text-gray-600">
+                      <span className="font-medium text-brand-dark">
+                        {i.vote.votant}
+                      </span>{" "}
+                      vote : duel {i.vote.duel} sur {i.vote.total}, depuis{" "}
+                      {heureLocale(i.vote.depuis)}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Bouton
+                        variante="secondaire"
+                        onClick={() =>
+                          setActionVote({ isoloir: i, action: "recommencer" })
+                        }
+                      >
+                        <RotateCcw size={14} /> Recommencer
+                      </Bouton>
+                      <Bouton
+                        variante="danger"
+                        onClick={() =>
+                          setActionVote({ isoloir: i, action: "annuler" })
+                        }
+                      >
+                        <XCircle size={14} /> Annuler le vote
+                      </Bouton>
+                    </div>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
         )}
       </Panneau>
+
+      {actionVote && (
+        <Confirmation
+          titre={
+            actionVote.action === "recommencer"
+              ? "Recommencer le vote ?"
+              : "Annuler le vote ?"
+          }
+          libelle={
+            actionVote.action === "recommencer"
+              ? "Recommencer"
+              : "Annuler le vote"
+          }
+          danger={actionVote.action === "annuler"}
+          onConfirm={confirmerActionVote}
+          onCancel={() => setActionVote(null)}
+        >
+          {actionVote.action === "recommencer" ? (
+            <p>
+              Les choix déjà faits par{" "}
+              <strong>{actionVote.isoloir.vote?.votant}</strong> sont effacés.
+              Le votant reste dans l'isoloir et reprend au premier duel : la
+              borne émet un signal d'erreur au prochain bouton, puis rallume le
+              duel 1.
+            </p>
+          ) : (
+            <>
+              <p>
+                Le vote de <strong>{actionVote.isoloir.vote?.votant}</strong>{" "}
+                est annulé : ses choix sont effacés et il redevient « n'a pas
+                voté ». Il pourra rescanner un isoloir, ou voter en ligne.
+              </p>
+              <p className="mt-2">
+                La borne se libère : elle se reverrouille au prochain appui sur
+                un bouton, ou en la redémarrant. Rien n'est compté dans les
+                résultats.
+              </p>
+            </>
+          )}
+        </Confirmation>
+      )}
 
       {aDesactiver && (
         <Confirmation

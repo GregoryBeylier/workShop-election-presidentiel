@@ -3,6 +3,8 @@ package fr.election.api.admin;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -35,6 +37,20 @@ public class IsoloirAdminController {
 	@PostMapping
 	public IsoloirCreeDto creer(@Valid @RequestBody IsoloirRequest requete) {
 		return isoloirService.creer(requete.libelle());
+	}
+
+	// Vote bloqué sur la borne : repartir du premier duel, le votant restant dans l'isoloir
+	@PostMapping("/{idIsoloir}/vote/recommencer")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void recommencerVote(@AuthenticationPrincipal Jwt jwt, @PathVariable Integer idIsoloir) {
+		isoloirService.recommencerVote(idIsoloir, Integer.valueOf(jwt.getSubject()));
+	}
+
+	// Vote bloqué sur la borne : tout effacer, le votant redevient « n'a pas voté »
+	@PostMapping("/{idIsoloir}/vote/annuler")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void annulerVote(@AuthenticationPrincipal Jwt jwt, @PathVariable Integer idIsoloir) {
+		isoloirService.annulerVote(idIsoloir, Integer.valueOf(jwt.getSubject()));
 	}
 
 	@PostMapping("/{idIsoloir}/desactiver")

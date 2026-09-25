@@ -138,6 +138,14 @@ export const supprimerLogoCandidat = (idCandidat: number) =>
 export const retirerCandidat = (idCandidat: number) =>
   apiFetch<void>(`/admin/candidats/${idCandidat}`, { method: "DELETE" });
 
+/** Qui vote sur la borne et où il en est (jamais ses choix). */
+export interface VoteEnCours {
+  votant: string; // email
+  duel: number; // duel en cours
+  total: number;
+  depuis: string; // heure du scan (UTC)
+}
+
 export interface IsoloirAdmin {
   id: number;
   libelle: string;
@@ -145,6 +153,7 @@ export interface IsoloirAdmin {
   aUneBorne: boolean;
   borneEnLigne: boolean; // la borne a appelé le serveur il y a moins de 10 s
   voteEnCours: boolean; // un votant a scanné et n'a pas encore fini sur la borne
+  vote: VoteEnCours | null;
 }
 
 /** Clés en clair de l'isoloir créé : renvoyées une seule fois, la base n'en garde que l'empreinte. */
@@ -166,5 +175,17 @@ export const creerIsoloir = (libelle: string) =>
 /** Écran ou borne perdu / manipulé : ses QR et sa borne sont refusés tout de suite. */
 export const desactiverIsoloir = (idIsoloir: number) =>
   apiFetch<void>(`/admin/isoloirs/${idIsoloir}/desactiver`, {
+    method: "POST",
+  });
+
+/** Vote bloqué : efface les choix, la borne repart au premier duel (le votant reste identifié). */
+export const recommencerVoteIsoloir = (idIsoloir: number) =>
+  apiFetch<void>(`/admin/isoloirs/${idIsoloir}/vote/recommencer`, {
+    method: "POST",
+  });
+
+/** Vote bloqué : efface les choix et l'émargement, le votant redevient « n'a pas voté ». */
+export const annulerVoteIsoloir = (idIsoloir: number) =>
+  apiFetch<void>(`/admin/isoloirs/${idIsoloir}/vote/annuler`, {
     method: "POST",
   });

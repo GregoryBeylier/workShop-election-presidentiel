@@ -32,6 +32,9 @@ Pour **chaque** isoloir, le jour de l'installation :
    « Merci ») se teste avant, sur une branche Neon de test.
 7. **Ne conserver les clés nulle part** (ni dans le dépôt, ni dans un message) : la base n'en garde que l'empreinte.
 
+Vote bloqué (votant parti, borne en panne) : dans l'onglet Isoloirs, **Recommencer** (retour au premier duel) ou
+**Annuler le vote** (le votant pourra rescanner). Un vote terminé n'est jamais touché.
+
 Isoloir perdu ou manipulé : bouton **Désactiver** dans l'onglet Isoloirs, puis créer un nouvel isoloir et reflasher
 la borne avec ses nouvelles clés.
 

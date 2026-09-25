@@ -270,6 +270,6 @@ CREATE TABLE choix_provisoire (
 | Sujet | Aujourd'hui |
 |---|---|
 | **Abandon** (C maintenu 5 s) | Pas de route. Le votant n'est pas censé abandonner. |
-| **Vote jamais terminé** (votant parti, borne en panne) | Ses choix provisoires seront effacés et ne comptent de toute façon pas (voir §5). Reste à décider quand : procédure assesseur ou expiration automatique, et si le votant peut alors recommencer. En attendant, la borne reste occupée et le votant émargé sans bulletin. |
+| **Vote jamais terminé** (votant parti, borne en panne) | Débloqué à la main depuis **Admin → Isoloirs** : *Recommencer* (choix effacés, retour au duel 1) ou *Annuler le vote* (choix et émargement effacés). La borne l'apprend à son prochain appel : un bouton reçoit `409` (recommencer) ou `404` (annuler), puis `/etat` la remet d'aplomb. Pas encore d'expiration automatique. |
 | **HTTPS** sur la borne | HTTP sur le réseau local dédié. |
 | **Plus de 3 candidats** | 4 au maximum sur cette carte (3 GPIO libres). |

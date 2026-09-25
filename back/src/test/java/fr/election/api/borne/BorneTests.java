@@ -26,9 +26,13 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.context.WebApplicationContext;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.jayway.jsonpath.JsonPath;
 
+import fr.election.api.admin.IsoloirAdminService;
+import fr.election.api.admin.dto.IsoloirAdminDto;
+import fr.election.api.auth.JwtService;
 import fr.election.api.checkin.CheckinService;
 import fr.election.api.checkin.CheckinService.ResultatCheckin;
 import fr.election.api.checkin.CheckinService.StatutVotant;
@@ -87,6 +91,8 @@ class BorneTests {
 	@Autowired ChoixProvisoireRepository choixRepository;
 	@Autowired TransactionTemplate transaction;
 	@Autowired WebApplicationContext context;
+	@Autowired IsoloirAdminService isoloirAdminService;
+	@Autowired JwtService jwtService;
 
 	MockMvc mvc;
 	Utilisateur alice, chloe;
@@ -354,6 +360,98 @@ class BorneTests {
 		String jetonChloe = jeton(CLE_BORNE_1);
 		assertThat(jetonChloe).isNotEqualTo(jetonAlice);
 		etat(CLE_BORNE_1).andExpect(jsonPath("$.duel.numero").value(1));
+	}
+
+	// ---------- Back office : reprendre en main un vote bloqué ----------
+
+	private IsoloirAdminDto isoloirDansLAdmin(Isoloir isoloir) {
+		return isoloirAdminService.lister().stream().filter(i -> i.id().equals(isoloir.getIdIsoloir())).findFirst()
+			.orElseThrow();
+	}
+
+	@Test
+	void adminVoitQuiVoteEtOuIlEnEst() throws Exception {
+		scanner(alice, isoloir1, CLE_BORNE_1);
+		choix(CLE_BORNE_1, jeton(CLE_BORNE_1), d12, "GAUCHE");
+
+		IsoloirAdminDto.VoteEnCours vote = isoloirDansLAdmin(isoloir1).vote();
+		assertThat(vote.votant()).isEqualTo("alice@mydigitalschool.fr");
+		assertThat(vote.duel()).isEqualTo(2);
+		assertThat(vote.total()).isEqualTo(3);
+		assertThat(isoloirDansLAdmin(isoloir2).vote()).isNull();
+	}
+
+	@Test
+	void recommencerRenvoieLaBorneAuPremierDuel() throws Exception {
+		scanner(alice, isoloir1, CLE_BORNE_1);
+		String jeton = jeton(CLE_BORNE_1);
+		choix(CLE_BORNE_1, jeton, d12, "GAUCHE");
+
+		isoloirAdminService.recommencerVote(isoloir1.getIdIsoloir(), 1);
+
+		assertThat(choixRepository.count()).isZero();
+		// La borne affichait le duel 2 : son prochain bouton est refusé, puis /etat la remet au duel 1
+		choix(CLE_BORNE_1, jeton, d13, "GAUCHE").andExpect(status().isConflict());
+		etat(CLE_BORNE_1).andExpect(jsonPath("$.etat").value("DEVERROUILLEE"))
+			.andExpect(jsonPath("$.jeton").value(jeton))
+			.andExpect(jsonPath("$.duel.numero").value(1));
+		assertThat(checkinService.statut(alice.getIdUtilisateur())).isEqualTo(StatutVotant.checked_in_isoloir);
+	}
+
+	@Test
+	void annulerLibereLaBorneEtLeVotant() throws Exception {
+		scanner(alice, isoloir1, CLE_BORNE_1);
+		String jeton = jeton(CLE_BORNE_1);
+		choix(CLE_BORNE_1, jeton, d12, "GAUCHE");
+
+		isoloirAdminService.annulerVote(isoloir1.getIdIsoloir(), 1);
+
+		assertThat(choixRepository.count()).isZero();
+		assertThat(emargementRepository.count()).isZero();
+		assertThat(checkinService.statut(alice.getIdUtilisateur())).isEqualTo(StatutVotant.not_voted);
+		// La borne affichait un duel : son prochain bouton est refusé (vote inconnu), puis elle est LIBRE
+		choix(CLE_BORNE_1, jeton, d13, "GAUCHE").andExpect(status().isNotFound());
+		etat(CLE_BORNE_1).andExpect(jsonPath("$.etat").value("LIBRE"));
+		// Alice peut recommencer depuis le scan
+		scanner(alice, isoloir1, CLE_BORNE_1);
+		etat(CLE_BORNE_1).andExpect(jsonPath("$.duel.numero").value(1));
+	}
+
+	@Test
+	void unVoteTermineNestJamaisTouche() throws Exception {
+		scanner(alice, isoloir1, CLE_BORNE_1);
+		String jeton = jeton(CLE_BORNE_1);
+		for (Affrontement d : List.of(d12, d13, d23)) {
+			choix(CLE_BORNE_1, jeton, d, "GAUCHE");
+		}
+
+		for (Runnable action : List.<Runnable>of(
+				() -> isoloirAdminService.annulerVote(isoloir1.getIdIsoloir(), 1),
+				() -> isoloirAdminService.recommencerVote(isoloir1.getIdIsoloir(), 1))) {
+			try {
+				action.run();
+				throw new AssertionError("Un vote terminé ne doit pas pouvoir être modifié");
+			} catch (ResponseStatusException e) {
+				assertThat(e.getStatusCode().value()).isEqualTo(409);
+			}
+		}
+		assertThat(bulletinRepository.count()).isEqualTo(1);
+		assertThat(ligneVoteRepository.count()).isEqualTo(3);
+		assertThat(emargementRepository.count()).isEqualTo(1);
+	}
+
+	@Test
+	void seulUnAdminPeutAnnulerUnVote() throws Exception {
+		scanner(alice, isoloir1, CLE_BORNE_1);
+		String url = "/api/admin/isoloirs/" + isoloir1.getIdIsoloir() + "/vote/annuler";
+
+		mvc.perform(post(url).header("Authorization", "Bearer " + jwtService.generer(chloe, false)))
+			.andExpect(status().isForbidden());
+		assertThat(emargementRepository.count()).isEqualTo(1);
+
+		mvc.perform(post(url).header("Authorization", "Bearer " + jwtService.generer(chloe, true)))
+			.andExpect(status().isNoContent());
+		assertThat(emargementRepository.count()).isZero();
 	}
 
 }
