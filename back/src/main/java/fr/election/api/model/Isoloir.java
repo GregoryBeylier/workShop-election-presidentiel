@@ -33,9 +33,10 @@ public class Isoloir {
 	@Column(name = "cle_tablette_hash", nullable = false, length = 64)
 	private String cleTabletteHash;
 
-	// SHA-256 (hex) de la clé de la borne (ESP32) de cet isoloir. null = isoloir sans borne
-	@Column(name = "cle_borne_hash", length = 64)
-	private String cleBorneHash;
+	// IP fixe de la borne (ESP32) de cet isoloir sur le Wi-Fi : c'est elle qui identifie la borne.
+	// null = isoloir sans borne
+	@Column(name = "ip_borne", length = 45)
+	private String ipBorne;
 
 	// Dernier appel de la borne (GET /api/borne/etat ou POST /api/borne/choix), en UTC
 	@Column(name = "derniere_activite_borne")
@@ -50,10 +51,10 @@ public class Isoloir {
 	public void setCleHmac(String cleHmac) { this.cleHmac = cleHmac; }
 	public String getCleTabletteHash() { return cleTabletteHash; }
 	public void setCleTabletteHash(String cleTabletteHash) { this.cleTabletteHash = cleTabletteHash; }
-	public String getCleBorneHash() { return cleBorneHash; }
-	public void setCleBorneHash(String cleBorneHash) { this.cleBorneHash = cleBorneHash; }
+	public String getIpBorne() { return ipBorne; }
+	public void setIpBorne(String ipBorne) { this.ipBorne = ipBorne; }
 	public LocalDateTime getDerniereActiviteBorne() { return derniereActiviteBorne; }
 	public void setDerniereActiviteBorne(LocalDateTime derniereActiviteBorne) { this.derniereActiviteBorne = derniereActiviteBorne; }
-	public boolean aUneBorne() { return cleBorneHash != null; }
+	public boolean aUneBorne() { return ipBorne != null; }
 
 }

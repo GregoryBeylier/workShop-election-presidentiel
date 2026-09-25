@@ -24,8 +24,11 @@ public interface IsoloirRepository extends JpaRepository<Isoloir, Integer> {
 	// Candidats pour un code court tapé par le votant
 	List<Isoloir> findByActifTrue();
 
-	// La borne s'identifie par sa clé : on la retrouve par l'empreinte, jamais par un numéro qu'elle enverrait
-	Optional<Isoloir> findByCleBorneHash(String cleBorneHash);
+	// La borne est reconnue à l'IP d'où vient la requête, jamais à un numéro qu'elle enverrait.
+	// Un isoloir désactivé garde son IP : on peut en recréer un pour la même borne
+	Optional<Isoloir> findByIpBorneAndActifTrue(String ipBorne);
+
+	boolean existsByIpBorneAndActifTrue(String ipBorne);
 
 	// Battement de cœur de la borne (chaque appel) : requête directe, sans recharger ni réécrire tout l'isoloir
 	@Modifying

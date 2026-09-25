@@ -7,10 +7,11 @@ Elle appelle exactement les mêmes routes que la vraie borne (borne/API.md) :
   - POST /api/borne/choix à chaque touche A (gauche), B (droite) ou C (blanc).
 
 Usage :
-  python3 borne/fausse-borne.py <clé borne> [adresse du back]
-  python3 borne/fausse-borne.py 3f9a...  http://localhost:8080
+  python3 borne/fausse-borne.py [adresse du back]
+  python3 borne/fausse-borne.py http://localhost:8080
 
-La clé borne est celle affichée à la création de l'isoloir (Admin → Isoloirs), ligne CLE_BORNE.
+Le serveur reconnaît la borne à son IP : créer l'isoloir (Admin → Isoloirs) avec l'IP de la machine
+qui lance ce script, vue par le back (127.0.0.1 si le back tourne sur la même machine hors Docker).
 Uniquement la bibliothèque standard de Python 3. Ctrl+C pour arrêter.
 """
 import json
@@ -23,11 +24,10 @@ PERIODE = 2  # secondes entre deux GET /etat, comme la vraie borne
 BOUTONS = {"A": "GAUCHE", "B": "DROITE", "C": "BLANC"}
 
 
-def appel(serveur, cle, methode, chemin, corps=None):
+def appel(serveur, methode, chemin, corps=None):
     """Renvoie (code HTTP, JSON ou None). Code 0 = serveur injoignable."""
     donnees = json.dumps(corps).encode() if corps is not None else None
     requete = urllib.request.Request(serveur + chemin, data=donnees, method=methode)
-    requete.add_header("X-Borne-Cle", cle)
     if donnees is not None:
         requete.add_header("Content-Type", "application/json")
     try:
@@ -47,7 +47,7 @@ def afficher_duel(duel):
     print("    C = blanc")
 
 
-def voter(serveur, cle, jeton, duel):
+def voter(serveur, jeton, duel):
     """Joue les duels au clavier jusqu'à TERMINE (ou une erreur, comme la vraie borne)."""
     while True:
         afficher_duel(duel)
@@ -55,7 +55,7 @@ def voter(serveur, cle, jeton, duel):
         while touche not in BOUTONS:
             touche = input("  Bouton (A / B / C) : ").strip().upper()
         choix = BOUTONS[touche]
-        code, rep = appel(serveur, cle, "POST", "/api/borne/choix",
+        code, rep = appel(serveur, "POST", "/api/borne/choix",
                           {"jeton": jeton, "idAffrontement": duel["idAffrontement"], "choix": choix})
         if code != 200:
             print(f"  ✗ POST /choix → {code or 'serveur injoignable'} : la borne se reverrouille")
@@ -69,18 +69,17 @@ def voter(serveur, cle, jeton, duel):
 
 def main():
     sys.stdout.reconfigure(line_buffering=True)
-    if len(sys.argv) < 2:
+    if len(sys.argv) > 1 and sys.argv[1] in ("-h", "--help"):
         print(__doc__)
-        sys.exit(1)
-    cle = sys.argv[1].strip()
-    serveur = (sys.argv[2] if len(sys.argv) > 2 else "http://localhost:8080").rstrip("/")
+        sys.exit(0)
+    serveur = (sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8080").rstrip("/")
 
     print(f"Fausse borne → {serveur}  (Ctrl+C pour arrêter)")
     dernier = None
     while True:
-        code, rep = appel(serveur, cle, "GET", "/api/borne/etat")
+        code, rep = appel(serveur, "GET", "/api/borne/etat")
         if code == 401:
-            etat = "HORS SERVICE : clé refusée (401). Vérifier la clé ou l'isoloir (désactivé ?)"
+            etat = "HORS SERVICE : borne refusée (401). Vérifier l'IP de la borne dans l'isoloir (logs du back), ou l'isoloir désactivé"
         elif code != 200:
             etat = f"HORS LIGNE : {'serveur injoignable' if code == 0 else f'erreur {code}'} (les LED clignoteraient)"
         else:
@@ -91,7 +90,7 @@ def main():
             dernier = etat
         if code == 200 and rep["etat"] == "DEVERROUILLEE":
             print("  ♪♪ Borne déverrouillée par un scan.")
-            voter(serveur, cle, rep["jeton"], rep["duel"])
+            voter(serveur, rep["jeton"], rep["duel"])
             dernier = None
         time.sleep(PERIODE)
 

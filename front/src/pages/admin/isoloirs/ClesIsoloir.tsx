@@ -4,15 +4,16 @@ import type { IsoloirCree } from "../../../api/admin";
 
 /**
  * Ce qu'il faut pour installer l'isoloir qui vient d'être créé : l'adresse de son écran
- * (avec la clé écran) et les lignes de config.h de sa borne (avec la clé borne).
- * Affiché une seule fois : la base ne garde que l'empreinte des clés.
+ * (avec la clé écran) et la ligne SERVEUR de config.h de sa borne.
+ * Affiché une seule fois : la base ne garde que l'empreinte de la clé écran.
  */
 function ClesIsoloir({ isoloir }: { isoloir: IsoloirCree }) {
   const urlEcran = `${window.location.origin}/isoloir/${isoloir.id}?cle=${isoloir.cleEcran}`;
-  // La borne parle directement au back (port 8080), en HTTP, sur le réseau local
+  // La borne parle directement au back (port 8080), en HTTP, sur le réseau local.
+  // Pas de clé : le serveur la reconnaît à son IP
   const configBorne = [
     `const char* const SERVEUR   = "http://${window.location.hostname}:8080";`,
-    `const char* const CLE_BORNE = "${isoloir.cleBorne}";`,
+    `const char* const CLE_BORNE = "";`,
   ].join("\n");
   const surLocalhost = ["localhost", "127.0.0.1"].includes(
     window.location.hostname,
@@ -32,8 +33,8 @@ function ClesIsoloir({ isoloir }: { isoloir: IsoloirCree }) {
         lien={urlEcran}
       />
       <Bloc
-        titre="2. Borne ESP32 : lignes à mettre dans config.h, puis reflasher"
-        aide="Garder aussi le Wi-Fi de l'événement dans config.h (WIFI_SSID, WIFI_MDP)."
+        titre={`2. Borne ESP32 (IP fixe ${isoloir.ipBorne}) : lignes de config.h`}
+        aide={`La borne doit avoir l'IP ${isoloir.ipBorne} sur le Wi-Fi (réservation DHCP ou IP fixe), sinon le serveur la refuse.`}
         valeur={configBorne}
       />
 
@@ -44,9 +45,9 @@ function ClesIsoloir({ isoloir }: { isoloir: IsoloirCree }) {
         </p>
       )}
       <p className="text-xs text-gray-500">
-        Ces clés ne seront plus affichées. En cas de perte, désactivez l'isoloir
-        et créez-en un nouveau. Ne les envoyez pas par message et ne les
-        commitez pas.
+        La clé de l'écran ne sera plus affichée. En cas de perte, désactivez
+        l'isoloir et créez-en un nouveau. Ne l'envoyez pas par message et ne
+        la commitez pas.
       </p>
     </div>
   );

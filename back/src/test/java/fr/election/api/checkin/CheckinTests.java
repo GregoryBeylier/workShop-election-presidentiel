@@ -184,7 +184,7 @@ class CheckinTests {
 
 	// Donne une borne à l'isoloir, dont le dernier appel date d'il y a `secondes`
 	private void brancherBorne(Isoloir isoloir, long secondes) {
-		isoloir.setCleBorneHash(IsoloirService.sha256Hex("cle-borne-" + isoloir.getLibelle()));
+		isoloir.setIpBorne("192.168.50." + (20 + isoloir.getIdIsoloir() % 200));
 		isoloir.setDerniereActiviteBorne(LocalDateTime.now(horloge).minusSeconds(secondes));
 		isoloirRepository.save(isoloir);
 	}
@@ -592,24 +592,38 @@ class CheckinTests {
 
 	@Test
 	void isoloirCreeParLAdminFonctionneAvecSesCles() throws Exception {
-		IsoloirCreeDto cree = isoloirAdminService.creer("  Isoloir 3 ");
+		IsoloirCreeDto cree = isoloirAdminService.creer("  Isoloir 3 ", "192.168.50.23");
 		Isoloir isoloir = isoloirRepository.findById(cree.id()).orElseThrow();
 
 		assertThat(isoloir.getLibelle()).isEqualTo("Isoloir 3");
-		// Les clés ne sont jamais stockées en clair, et chaque isoloir a les siennes
-		assertThat(cree.cleEcran()).hasSize(48).isNotEqualTo(cree.cleBorne());
+		assertThat(isoloir.getIpBorne()).isEqualTo("192.168.50.23");
+		// La clé de l'écran n'est jamais stockée en clair, et chaque isoloir a la sienne
+		assertThat(cree.cleEcran()).hasSize(48);
 		assertThat(isoloir.getCleTabletteHash()).isEqualTo(IsoloirService.sha256Hex(cree.cleEcran()));
-		assertThat(isoloir.getCleBorneHash()).isEqualTo(IsoloirService.sha256Hex(cree.cleBorne()));
-		assertThat(isoloirAdminService.creer("Isoloir 4").cleEcran()).isNotEqualTo(cree.cleEcran());
+		assertThat(isoloirAdminService.creer("Isoloir 4", "192.168.50.24").cleEcran()).isNotEqualTo(cree.cleEcran());
 
 		mvc.perform(get("/api/booths/" + cree.id() + "/current-code").header("X-Isoloir-Cle", cree.cleEcran()))
 			.andExpect(status().isOk());
 		// Nouvelle borne qui n'a encore jamais appelé : hors ligne
 		assertThat(isoloirAdminService.lister()).filteredOn(i -> i.id().equals(cree.id()))
 			.singleElement().satisfies(i -> {
-				assertThat(i.aUneBorne()).isTrue();
+				assertThat(i.ipBorne()).isEqualTo("192.168.50.23");
 				assertThat(i.borneEnLigne()).isFalse();
 			});
+	}
+
+	@Test
+	void deuxIsoloirsActifsNePartagentPasUneBorne() {
+		isoloirAdminService.creer("Isoloir 3", "192.168.50.23");
+
+		assertThatThrownBy(() -> isoloirAdminService.creer("Isoloir 3 bis", "192.168.50.23"))
+			.isInstanceOf(ResponseStatusException.class)
+			.extracting(e -> ((ResponseStatusException) e).getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+
+		// Borne remplacée : une fois l'ancien isoloir désactivé, on en recrée un avec la même IP
+		Integer ancien = isoloirRepository.findByIpBorneAndActifTrue("192.168.50.23").orElseThrow().getIdIsoloir();
+		isoloirAdminService.desactiver(ancien);
+		assertThat(isoloirAdminService.creer("Isoloir 3 bis", "192.168.50.23").ipBorne()).isEqualTo("192.168.50.23");
 	}
 
 	@Test
@@ -637,13 +651,20 @@ class CheckinTests {
 		mvc.perform(get("/api/admin/isoloirs").header("Authorization", bearer(alice)))
 			.andExpect(status().isForbidden());
 		mvc.perform(post("/api/admin/isoloirs").header("Authorization", "Bearer " + jwtService.generer(chloe, true))
-				.contentType(MediaType.APPLICATION_JSON).content("{\"libelle\":\"Isoloir 5\"}"))
+				.contentType(MediaType.APPLICATION_JSON).content("{\"libelle\":\"Isoloir 5\",\"ipBorne\":\"192.168.50.25\"}"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.cleEcran").isString())
-			.andExpect(jsonPath("$.cleBorne").isString());
+			.andExpect(jsonPath("$.ipBorne").value("192.168.50.25"));
 		mvc.perform(post("/api/admin/isoloirs").header("Authorization", "Bearer " + jwtService.generer(chloe, true))
-				.contentType(MediaType.APPLICATION_JSON).content("{\"libelle\":\" \"}"))
+				.contentType(MediaType.APPLICATION_JSON).content("{\"libelle\":\" \",\"ipBorne\":\"192.168.50.26\"}"))
 			.andExpect(status().isBadRequest());
+		// IP absente ou mal formée
+		for (String corps : List.of("{\"libelle\":\"Isoloir 6\"}", "{\"libelle\":\"Isoloir 6\",\"ipBorne\":\"192.168.50.300\"}",
+				"{\"libelle\":\"Isoloir 6\",\"ipBorne\":\"borne-1\"}")) {
+			mvc.perform(post("/api/admin/isoloirs").header("Authorization", "Bearer " + jwtService.generer(chloe, true))
+					.contentType(MediaType.APPLICATION_JSON).content(corps))
+				.andExpect(status().isBadRequest());
+		}
 	}
 
 }

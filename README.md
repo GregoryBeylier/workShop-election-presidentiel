@@ -14,14 +14,14 @@ lacamarche1
 
 Pour **chaque** isoloir, le jour de l'installation :
 
-1. **Créer l'isoloir dans l'appli** : se connecter en admin → **Admin** → onglet **Isoloirs** → **Créer l'isoloir**.
-   Le serveur génère les deux clés (écran et borne) et les affiche **une seule fois** : l'adresse de l'écran et les
-   lignes de `config.h` de la borne, avec un bouton « Copier ». Rien à taper en SQL.
-   (Sans l'appli : la requête `INSERT INTO isoloir …` de l'étape 4 de `guide-neon.sql`, avec deux clés `openssl rand -hex 24`.)
+1. **Créer l'isoloir dans l'appli** : se connecter en admin → **Admin** → onglet **Isoloirs** → nom + **IP de la borne**
+   → **Créer l'isoloir**. Le serveur génère la clé de l'écran et l'affiche **une seule fois** (adresse de l'écran),
+   avec les lignes de `config.h` de la borne et un bouton « Copier ». Rien à taper en SQL.
 2. Ne jamais réutiliser les clés de démo ou de test (`cle-test-isoloir`, `cle-test-borne`, `tablette-isoloir-…-demo`).
-3. **Flasher la borne** : dans `borne/firmware/IsoloireConnecte/config.h`, coller les lignes `SERVEUR` et `CLE_BORNE`
-   données par l'onglet Isoloirs (`SERVEUR` = l'IP du serveur sur le Wi-Fi, jamais `localhost`), et le Wi-Fi de
-   l'événement. `config.h` n'est jamais commité.
+3. **Borne** : lui donner une **IP fixe** sur le Wi-Fi (réservation DHCP sur le routeur), et saisir cette IP à la
+   création de l'isoloir : c'est elle qui identifie la borne. Dans `config.h`, `SERVEUR` = l'IP du serveur sur le Wi-Fi
+   (jamais `localhost`), `CLE_BORNE` vide, et le Wi-Fi de l'événement. `config.h` n'est jamais commité.
+   Une seule fois sur la base : lancer [qr-code/sql/migration-ip-borne.sql](qr-code/sql/migration-ip-borne.sql).
 4. **Ouvrir sur l'écran** l'adresse donnée par l'onglet Isoloirs, en mode kiosque, puis **effacer l'historique** du
    navigateur (l'URL contenait la clé).
 5. **Installer le poste** selon la checklist : serveur sur une autre machine, pas de clavier ni de souris dans l'isoloir,

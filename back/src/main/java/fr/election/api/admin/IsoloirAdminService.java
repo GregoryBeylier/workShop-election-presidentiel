@@ -41,29 +41,33 @@ public class IsoloirAdminService {
 		LocalDateTime limite = LocalDateTime.now(clock).minus(CheckinService.DELAI_BORNE_EN_LIGNE);
 		return isoloirRepository.findAll().stream()
 			.sorted((a, b) -> a.getIdIsoloir().compareTo(b.getIdIsoloir()))
-			.map(i -> new IsoloirAdminDto(i.getIdIsoloir(), i.getLibelle(), i.isActif(), i.aUneBorne(),
+			.map(i -> new IsoloirAdminDto(i.getIdIsoloir(), i.getLibelle(), i.isActif(), i.getIpBorne(),
 					i.getDerniereActiviteBorne() != null && !i.getDerniereActiviteBorne().isBefore(limite),
 					emargementRepository.existsVoteOuvert(i.getIdIsoloir())))
 			.toList();
 	}
 
 	/**
-	 * Crée un isoloir avec trois secrets tirés au hasard : la clé qui calcule ses codes (reste dans la base),
-	 * la clé de l'écran et la clé de la borne (renvoyées une seule fois, la base n'en garde que l'empreinte).
+	 * Crée un isoloir avec deux secrets tirés au hasard : la clé qui calcule ses codes (reste dans la base)
+	 * et la clé de l'écran (renvoyée une seule fois, la base n'en garde que l'empreinte).
+	 * Sa borne est reconnue à son IP fixe : deux isoloirs actifs ne peuvent pas avoir la même.
 	 */
 	@Transactional
-	public IsoloirCreeDto creer(String libelle) {
+	public IsoloirCreeDto creer(String libelle, String ipBorne) {
+		if (isoloirRepository.existsByIpBorneAndActifTrue(ipBorne)) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"Un isoloir actif utilise déjà la borne " + ipBorne + ". Désactivez-le d'abord.");
+		}
 		String cleEcran = aleaHex(24);
-		String cleBorne = aleaHex(24);
 
 		Isoloir isoloir = new Isoloir();
 		isoloir.setLibelle(libelle.strip());
 		isoloir.setCleHmac(aleaHex(32));
 		isoloir.setCleTabletteHash(IsoloirService.sha256Hex(cleEcran));
-		isoloir.setCleBorneHash(IsoloirService.sha256Hex(cleBorne));
+		isoloir.setIpBorne(ipBorne);
 		isoloirRepository.save(isoloir);
 
-		return new IsoloirCreeDto(isoloir.getIdIsoloir(), isoloir.getLibelle(), cleEcran, cleBorne);
+		return new IsoloirCreeDto(isoloir.getIdIsoloir(), isoloir.getLibelle(), cleEcran, ipBorne);
 	}
 
 	// Écran ou borne perdu / manipulé : ses codes et sa borne sont refusés tout de suite. On en crée un autre.
