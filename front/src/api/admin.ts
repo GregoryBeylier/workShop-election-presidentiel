@@ -144,7 +144,7 @@ export interface IsoloirAdmin {
   actif: boolean;
   aUneBorne: boolean;
   borneEnLigne: boolean; // la borne a appelé le serveur il y a moins de 10 s
-  voteEnCours: boolean; // un votant a scanné et n'a pas encore fini sur la borne
+  voteEnCours: boolean; // un votant a validé le code et n'a pas encore fini sur la borne
 }
 
 /** Clés en clair de l'isoloir créé : renvoyées une seule fois, la base n'en garde que l'empreinte. */
@@ -163,7 +163,7 @@ export const creerIsoloir = (libelle: string) =>
     body: { libelle },
   });
 
-/** Écran ou borne perdu / manipulé : ses QR et sa borne sont refusés tout de suite. */
+/** Écran ou borne perdu / manipulé : ses codes et sa borne sont refusés tout de suite. */
 export const desactiverIsoloir = (idIsoloir: number) =>
   apiFetch<void>(`/admin/isoloirs/${idIsoloir}/desactiver`, {
     method: "POST",

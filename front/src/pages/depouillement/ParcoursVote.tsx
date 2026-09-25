@@ -1,4 +1,4 @@
-import { BarChart3, KeyRound, QrCode, Swords } from "lucide-react";
+import { BarChart3, Hash, KeyRound, Swords } from "lucide-react";
 
 /** Section 1 : le parcours d'un électeur, de la connexion aux résultats. */
 function ParcoursVote({ nbDuels }: { nbDuels: number }) {
@@ -10,10 +10,10 @@ function ParcoursVote({ nbDuels }: { nbDuels: number }) {
         "Vous vous connectez avec les identifiants remis par l'école. Chaque électeur est inscrit au scrutin en cours et ne dispose que d'un seul bulletin.",
     },
     {
-      icon: QrCode,
+      icon: Hash,
       titre: "Choix du mode",
       texte:
-        "En ligne depuis votre téléphone ou votre ordinateur, ou à l'isoloir en scannant le QR code puis en votant avec les boutons de la borne. L'un ou l'autre, jamais les deux.",
+        "En ligne depuis votre téléphone ou votre ordinateur, ou à l'isoloir en tapant le code affiché sur l'écran puis en votant avec les boutons de la borne. L'un ou l'autre, jamais les deux.",
     },
     {
       icon: Swords,

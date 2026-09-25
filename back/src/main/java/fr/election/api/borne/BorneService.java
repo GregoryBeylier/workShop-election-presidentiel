@@ -39,7 +39,7 @@ import fr.election.api.repository.LigneVoteRepository;
 /**
  * Routes de la borne ESP32 (contrat : borne/API.md). La borne ne décide rien : elle affiche le duel que le
  * serveur lui donne et renvoie le bouton appuyé. Le vote ouvert sur une borne est l'émargement créé par le
- * scan du QR (CheckinService) ; son numéro sert de "jeton". En cas d'erreur, la borne ne lit que le code HTTP.
+ * check-in par code (CheckinService) ; son numéro sert de "jeton". En cas d'erreur, la borne ne lit que le code HTTP.
  */
 @Service
 public class BorneService {

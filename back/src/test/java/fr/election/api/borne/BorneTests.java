@@ -34,7 +34,7 @@ import fr.election.api.checkin.CheckinService.ResultatCheckin;
 import fr.election.api.checkin.CheckinService.StatutVotant;
 import fr.election.api.checkin.HorlogeTest;
 import fr.election.api.checkin.IsoloirService;
-import fr.election.api.checkin.QrTokenService;
+import fr.election.api.checkin.CodeIsoloirService;
 import fr.election.api.model.Affrontement;
 import fr.election.api.model.Candidat;
 import fr.election.api.model.Inscription;
@@ -73,7 +73,7 @@ class BorneTests {
 
 	@Autowired HorlogeTest horloge;
 	@Autowired CheckinService checkinService;
-	@Autowired QrTokenService qrTokenService;
+	@Autowired CodeIsoloirService codeIsoloirService;
 	@Autowired UtilisateurRepository utilisateurRepository;
 	@Autowired PeriodeVoteRepository periodeRepository;
 	@Autowired InscriptionRepository inscriptionRepository;
@@ -174,11 +174,11 @@ class BorneTests {
 		return isoloirRepository.save(iso);
 	}
 
-	// Le votant scanne le QR de l'isoloir (la borne vient d'appeler : elle est en ligne)
+	// Le votant tape le code de l'isoloir (la borne vient d'appeler : elle est en ligne)
 	private void scanner(Utilisateur u, Isoloir isoloir, String cleBorne) throws Exception {
 		etat(cleBorne).andExpect(status().isOk());
-		String qr = qrTokenService.generer(isoloir, horloge.instant()).payload();
-		assertThat(checkinService.checkin(u.getIdUtilisateur(), qr).status()).isEqualTo(ResultatCheckin.success);
+		String code = codeIsoloirService.generer(isoloir, horloge.instant()).code();
+		assertThat(checkinService.checkin(u.getIdUtilisateur(), code).status()).isEqualTo(ResultatCheckin.success);
 	}
 
 	private ResultActions etat(String cleBorne) throws Exception {

@@ -2,16 +2,16 @@ import { API_URL } from "./config";
 import { apiFetch, ApiError } from "./client";
 
 /**
- * Mode de vote (en ligne ou isoloir) et check-in QR de l'isoloir
- * (voir qr-code/spec-checkin-qr-isoloir.md et borne/API.md).
- * Le scan ouvre le vote sur la borne de l'isoloir : le votant vote ensuite avec ses boutons.
+ * Mode de vote (en ligne ou isoloir) et check-in par le code de l'isoloir (voir borne/API.md).
+ * Le code à 6 chiffres affiché sur l'écran de l'isoloir ouvre le vote sur sa borne :
+ * le votant vote ensuite avec ses boutons.
  * Le votant est identifié par son JWT : le back ignore toute autre identité envoyée par le front.
  */
 
 export type StatutVotant =
   | "not_voted"
   | "voted_app" // a commencé (ou fini) de voter en ligne
-  | "checked_in_isoloir" // scan fait : vote en cours sur la borne
+  | "checked_in_isoloir" // code validé : vote en cours sur la borne
   | "voted_booth" // la borne a enregistré le bulletin
   | "not_registered";
 
@@ -19,11 +19,11 @@ export interface ReponseCheckin {
   status:
     | "success"
     | "already_voted"
-    | "expired_token"
-    | "invalid_token"
+    | "invalid_token" // code faux ou expiré
     | "not_registered"
     | "booth_offline" // la borne ne répond plus
-    | "booth_busy"; // un autre votant est en train de voter sur cette borne
+    | "booth_busy" // un autre votant est en train de voter sur cette borne
+    | "too_many_attempts"; // trop de codes courts incorrects, bloqué quelques minutes
   message: string;
 }
 
@@ -32,8 +32,8 @@ export interface ReponseVoteEnLigne {
   message: string;
 }
 
-export interface QrIsoloir {
-  qr_payload: string;
+export interface CodeIsoloir {
+  code: string; // 6 chiffres, change toutes les 30 s
   expires_in: number;
 }
 
@@ -41,9 +41,9 @@ export function getStatutVotant(): Promise<StatutVotant> {
   return apiFetch<{ status: StatutVotant }>("/voter/me/status").then((r) => r.status);
 }
 
-// Après le scan du QR affiché dans l'isoloir : ouvre le vote sur la borne, révoque le vote en ligne
-export function checkin(qrToken: string) {
-  return apiFetch<ReponseCheckin>("/checkin", { method: "POST", body: { qr_token: qrToken } });
+// Code tapé par le votant : ouvre le vote sur la borne de l'isoloir, révoque le vote en ligne
+export function checkin(code: string) {
+  return apiFetch<ReponseCheckin>("/checkin", { method: "POST", body: { code } });
 }
 
 // Le votant choisit le vote en ligne : ferme définitivement le vote à l'isoloir
@@ -52,13 +52,13 @@ export function commencerVoteEnLigne() {
 }
 
 /**
- * QR courant d'un isoloir, pour l'écran du poste. Pas de JWT (le poste n'a pas de compte) :
+ * Code courant d'un isoloir, pour l'écran du poste. Pas de JWT (le poste n'a pas de compte) :
  * il présente la clé de l'isoloir. D'où un fetch direct plutôt qu'apiFetch.
  */
-export async function getQrIsoloir(idIsoloir: string, cleIsoloir: string): Promise<QrIsoloir> {
+export async function getCodeIsoloir(idIsoloir: string, cleIsoloir: string): Promise<CodeIsoloir> {
   let res: Response;
   try {
-    res = await fetch(`${API_URL}/booths/${idIsoloir}/current-qr`, {
+    res = await fetch(`${API_URL}/booths/${idIsoloir}/current-code`, {
       headers: { "X-Isoloir-Cle": cleIsoloir },
       cache: "no-store",
     });
@@ -66,7 +66,7 @@ export async function getQrIsoloir(idIsoloir: string, cleIsoloir: string): Promi
     throw new ApiError(0, "Impossible de joindre le serveur");
   }
   if (!res.ok) {
-    throw new ApiError(res.status, "QR indisponible");
+    throw new ApiError(res.status, "Code indisponible");
   }
-  return res.json() as Promise<QrIsoloir>;
+  return res.json() as Promise<CodeIsoloir>;
 }

@@ -1,20 +1,19 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
-import { QRCodeSVG } from "qrcode.react";
 import { ApiError } from "../../api/client";
-import { getQrIsoloir } from "../../api/checkin";
+import { getCodeIsoloir } from "../../api/checkin";
 
 const POLL_MS = 1000;
 
 type TabletState =
   | { kind: "loading" }
   | { kind: "unauthorized" }
-  | { kind: "ok"; payload: string; expiresAt: number }
-  | { kind: "offline"; payload: string | null; expiresAt: number };
+  | { kind: "ok"; code: string; expiresAt: number }
+  | { kind: "offline"; code: string | null; expiresAt: number };
 
 /**
  * Écran plein écran de la tablette isoloir.
- * N'affiche que le QR fourni par le serveur (jamais généré localement) et rien sur les votants.
+ * N'affiche que le code fourni par le serveur (jamais calculé localement) et rien sur les votants.
  * La clé tablette est passée une fois dans l'URL (?cle=...) puis mémorisée sur l'appareil.
  */
 function PageIsoloir() {
@@ -39,15 +38,9 @@ function PageIsoloir() {
 
     const poll = async () => {
       try {
-        const qr = await getQrIsoloir(id, boothKey);
+        const res = await getCodeIsoloir(id, boothKey);
         if (cancelled) return;
-        const expiresAt = Date.now() + qr.expires_in;
-        // Même QR qu'avant : on ne touche pas au rendu pour éviter tout clignotement
-        setState((prev) =>
-          prev.kind === "ok" && prev.payload === qr.qr_payload
-            ? { ...prev, expiresAt }
-            : { kind: "ok", payload: qr.qr_payload, expiresAt },
-        );
+        setState({ kind: "ok", code: res.code, expiresAt: Date.now() + res.expires_in });
       } catch (e) {
         if (cancelled) return;
         if (e instanceof ApiError && e.status === 401) {
@@ -56,8 +49,8 @@ function PageIsoloir() {
         }
         setState((prev) =>
           prev.kind === "ok" || prev.kind === "offline"
-            ? { kind: "offline", payload: prev.payload, expiresAt: prev.expiresAt }
-            : { kind: "offline", payload: null, expiresAt: 0 },
+            ? { kind: "offline", code: prev.code, expiresAt: prev.expiresAt }
+            : { kind: "offline", code: null, expiresAt: 0 },
         );
       }
     };
@@ -86,25 +79,22 @@ function PageIsoloir() {
     );
   }
 
-  // Un QR expiré ne sert à rien : on le masque plutôt que de faire échouer les scans
-  const payload =
-    state.kind === "ok" || (state.kind === "offline" && state.expiresAt > now)
-      ? state.payload
-      : null;
+  // Hors ligne, on garde le code jusqu'à sa rotation, puis on le masque (il serait refusé)
+  const code =
+    state.kind === "ok" || (state.kind === "offline" && state.expiresAt > now) ? state.code : null;
   const connected = state.kind === "ok";
 
   return (
     <FullScreen>
-      {payload ? (
-        // Fond noir autour pour ne pas éblouir dans l'isoloir ; le QR garde sa marge blanche
-        // (4 modules) dont les téléphones ont besoin pour le lire
-        <QRCodeSVG
-          value={payload}
-          size={1024}
-          marginSize={4}
-          level="M"
-          className="w-[min(70vw,65vh)] h-auto rounded-lg"
-        />
+      {code ? (
+        <>
+          <p className="text-2xl text-gray-400 text-center px-6">
+            Tapez ce code dans l'appli, rubrique « Voter à l'isoloir »
+          </p>
+          <p className="font-mono font-bold text-white tabular-nums tracking-widest text-[min(18vw,30vh)] leading-none">
+            {code.slice(0, 3)} {code.slice(3)}
+          </p>
+        </>
       ) : (
         <p className="text-2xl font-heading font-bold text-gray-300">
           {state.kind === "loading" ? "Chargement…" : "Connexion au serveur perdue"}
@@ -126,7 +116,7 @@ function PageIsoloir() {
 
 function FullScreen({ children }: { children: ReactNode }) {
   return (
-    <div className="fixed inset-0 bg-black flex flex-col items-center justify-center gap-4 select-none">
+    <div className="fixed inset-0 bg-black flex flex-col items-center justify-center gap-6 select-none">
       {children}
     </div>
   );

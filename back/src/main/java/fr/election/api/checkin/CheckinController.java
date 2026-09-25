@@ -10,8 +10,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import fr.election.api.checkin.CheckinService.Reponse;
 import fr.election.api.checkin.CheckinService.ReponseVoteEnLigne;
 import jakarta.validation.Valid;
@@ -22,7 +20,7 @@ import jakarta.validation.constraints.NotBlank;
 @RequestMapping("/api")
 public class CheckinController {
 
-	public record CheckinRequest(@JsonProperty("qr_token") @NotBlank String qrToken) {}
+	public record CheckinRequest(@NotBlank String code) {}
 
 	private final CheckinService checkinService;
 
@@ -30,11 +28,11 @@ public class CheckinController {
 		this.checkinService = checkinService;
 	}
 
-	// Appelé par l'appli du votant après le scan. Les refus métier (déjà voté, QR expiré...)
+	// Appelé par l'appli du votant avec le code tapé. Les refus métier (déjà voté, code faux...)
 	// sont renvoyés en 200 avec leur status, pour que l'appli affiche le message tel quel.
 	@PostMapping("/checkin")
 	public Reponse checkin(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CheckinRequest request) {
-		return checkinService.checkin(Integer.valueOf(jwt.getSubject()), request.qrToken());
+		return checkinService.checkin(Integer.valueOf(jwt.getSubject()), request.code());
 	}
 
 	// Le votant choisit le vote en ligne : ferme définitivement le vote à l'isoloir

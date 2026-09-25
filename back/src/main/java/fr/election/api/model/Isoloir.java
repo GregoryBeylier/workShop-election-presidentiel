@@ -25,11 +25,11 @@ public class Isoloir {
 	@Column(name = "actif", nullable = false)
 	private boolean actif = true;
 
-	// Clé HMAC (hex) qui signe les QR de cet isoloir, jamais envoyée à un client
+	// Clé HMAC (hex) qui calcule les codes de cet isoloir, jamais envoyée à un client
 	@Column(name = "cle_hmac", nullable = false, length = 64)
 	private String cleHmac;
 
-	// SHA-256 (hex) de la clé que la tablette présente pour récupérer son QR
+	// SHA-256 (hex) de la clé que la tablette présente pour récupérer son code
 	@Column(name = "cle_tablette_hash", nullable = false, length = 64)
 	private String cleTabletteHash;
 

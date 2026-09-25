@@ -5,7 +5,7 @@
 **Pour** : Léo (firmware), équipe backend.
 
 > **Ce qui change par rapport à ROUTES.md**
-> - Le déverrouillage de la borne se fait par le **check-in QR de l'isoloir** (QR tournant affiché sur l'écran de l'isoloir), plus par un autocollant QR fixe. Les routes A1, A2, D1, D2 et la page front `/borne/:id` disparaissent.
+> - Le déverrouillage de la borne se fait par le **check-in par code de l'isoloir** (code à 6 chiffres affiché sur l'écran de l'isoloir, qui change toutes les 30 s ; il a remplacé le QR tournant), plus par un autocollant QR fixe. Les routes A1, A2, D1, D2 et la page front `/borne/:id` disparaissent.
 > - La borne **n'envoie plus son numéro** : elle s'identifie par sa clé (`X-Borne-Cle`). Les routes deviennent `/api/borne/...` au lieu de `/api/bornes/{id}/...`.
 > - L'abandon (C maintenu 5 s) est **mis de côté** pour l'instant.
 > - Les formats JSON de `etat` et `choix` ne changent pas : le firmware garde sa logique.
@@ -17,10 +17,10 @@
 La borne ne décide rien. Elle **affiche ce que le serveur lui dit** (deux LED) et **transmet les boutons appuyés**. Elle ne sait pas qui vote et ne parle jamais au téléphone. Tout se décide au serveur, qui a la base.
 
 ```
-📱 téléphone ──scan du QR tournant──► 🗄 serveur ◄──« j'affiche quoi ? » / « on a appuyé sur A »── 🔌 borne
+📱 téléphone ──code tapé dans l'appli──► 🗄 serveur ◄──« j'affiche quoi ? » / « on a appuyé sur A »── 🔌 borne
 ```
 
-Un **isoloir** = un écran qui affiche le QR tournant + une borne. Il n'y a pas de vote papier (seulement en secours, en cas de panne : procédure du bureau de vote, rien à coder).
+Un **isoloir** = un écran qui affiche le code à 6 chiffres + une borne. Il n'y a pas de vote papier (seulement en secours, en cas de panne : procédure du bureau de vote, rien à coder).
 
 ---
 
@@ -66,12 +66,12 @@ X-Borne-Cle: 3b9f…(48 caractères hex)
 
 Appelée **toutes les 2 secondes** tant que la borne est verrouillée. Sert aussi de **battement de cœur** : le serveur note l'heure de chaque appel (`isoloir.derniere_activite_borne`). Le check-in refuse d'ouvrir un vote sur une borne silencieuse depuis plus de 10 s.
 
-**`200` — personne n'a scanné**
+**`200` — personne n'a validé de code**
 ```json
 { "etat": "LIBRE" }
 ```
 
-**`200` — un votant a scanné le QR de cet isoloir**
+**`200` — un votant a validé le code de cet isoloir**
 ```json
 {
   "etat": "DEVERROUILLEE",
@@ -172,12 +172,12 @@ Emma, 3 candidats : Moreau (LED 0), Fontaine (LED 1), Belkacem (LED 2).
 
 ```
    📱 TÉLÉPHONE D'EMMA               🗄 SERVEUR                          🔌 BORNE          🖥 ÉCRAN ISOLOIR
-         │                              │◄──── GET /api/borne/etat ──────│  toutes les 2 s   QR tournant
+         │                              │◄──── GET /api/borne/etat ──────│  toutes les 2 s   code à 6 chiffres
          │                              │───── LIBRE ───────────────────►│  LED éteintes     (change toutes les 5 s)
          │                              │                                │
  ① login, Vote → « Voter à l'isoloir »  │                                │
- ② scanne le QR de l'écran              │                                │
-         │── POST /api/checkin ────────►│ QR valide ? inscrite ? pas de bulletin ?
+ ② tape le code de l'écran               │                                │
+         │── POST /api/checkin ────────►│ code valide ? inscrite ? pas de bulletin ?
          │                              │ borne en ligne et libre ?
          │                              │ → émargement : vote ouvert sur la borne
          │◄── success « Votez sur la borne »                             │
@@ -197,14 +197,14 @@ Emma, 3 candidats : Moreau (LED 0), Fontaine (LED 1), Belkacem (LED 2).
  « Merci, votre vote est enregistré »   │◄──── GET /api/borne/etat ──────│  LIBRE : prête pour le suivant
 ```
 
-Le téléphone et la borne ne se parlent jamais. Le lien entre les deux, c'est **l'émargement** créé par le scan : « la borne de l'isoloir 1 vote pour Emma ».
+Le téléphone et la borne ne se parlent jamais. Le lien entre les deux, c'est **l'émargement** créé par le check-in : « la borne de l'isoloir 1 vote pour Emma ».
 
 ### Statut du votant (`GET /api/voter/me/status`)
 
 | Moment | `status` |
 |---|---|
-| Avant le scan | `not_voted` |
-| Scan fait, vote en cours sur la borne | `checked_in_isoloir` |
+| Avant le code | `not_voted` |
+| Code validé, vote en cours sur la borne | `checked_in_isoloir` |
 | Bulletin écrit par la borne | `voted_booth` (nouveau) |
 | A voté (ou commencé à voter) en ligne | `voted_app` |
 | Pas inscrit à la période ouverte | `not_registered` |
@@ -257,7 +257,7 @@ CREATE TABLE choix_provisoire (
 ```
 
 - **Vote ouvert sur une borne** = un `emargement_isoloir` de cet isoloir dont l'inscription n'a pas encore de `bulletin`.
-- **Borne occupée** : le check-in verrouille la ligne `isoloir` (`SELECT … FOR UPDATE`) pour que deux votants qui scannent en même temps ne l'ouvrent pas tous les deux.
+- **Borne occupée** : le check-in verrouille la ligne `isoloir` (`SELECT … FOR UPDATE`) pour que deux votants qui valident un code en même temps ne l'ouvrent pas tous les deux.
 - **Heure en UTC** : `derniere_activite_borne` est écrite avec le `Clock` du back (`CheckinConfig`, UTC), comme le check-in qui la compare. Toujours utiliser ce bean, jamais `LocalDateTime.now()` sans horloge.
 - **Fait** : check-in (refus `booth_offline` / `booth_busy`, statut `voted_booth`), routes B2 et B3 (`fr.election.api.borne` : `BorneController`, `BorneService`, entité `ChoixProvisoire`), back office admin des isoloirs. Tests : `BorneTests`. SQL : `qr-code/sql/migration-borne.sql` puis `migration-borne-choix.sql`.
 - Code `410` sur B3 : le scrutin a été clos pendant le vote.

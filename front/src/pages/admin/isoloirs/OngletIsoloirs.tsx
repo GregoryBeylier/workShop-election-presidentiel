@@ -20,7 +20,7 @@ import ClesIsoloir from "./ClesIsoloir";
 const INTERVALLE_MS = 3000;
 
 /**
- * Onglet "Isoloirs" : un isoloir = un écran qui affiche le QR + une borne ESP32.
+ * Onglet "Isoloirs" : un isoloir = un écran qui affiche le code + une borne ESP32.
  * Création (avec ses clés), suivi des bornes en direct, désactivation.
  */
 function OngletIsoloirs() {
@@ -151,7 +151,7 @@ function OngletIsoloirs() {
           onCancel={() => setADesactiver(null)}
         >
           <p>
-            Les QR de <strong>{aDesactiver.libelle}</strong> seront refusés tout
+            Les codes de <strong>{aDesactiver.libelle}</strong> seront refusés tout
             de suite, et sa borne aussi. À utiliser si l'écran ou la borne a été
             perdu ou manipulé : créez ensuite un nouvel isoloir, avec de
             nouvelles clés. Cette action est irréversible.

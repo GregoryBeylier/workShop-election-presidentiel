@@ -16,7 +16,7 @@ import fr.election.api.admin.dto.IsoloirCreeDto;
 import fr.election.api.admin.dto.IsoloirRequest;
 import jakarta.validation.Valid;
 
-// Isoloirs (écran QR + borne) : /api/admin/** est réservé au rôle ADMIN (voir SecurityConfig)
+// Isoloirs (écran du code + borne) : /api/admin/** est réservé au rôle ADMIN (voir SecurityConfig)
 @RestController
 @RequestMapping("/api/admin/isoloirs")
 public class IsoloirAdminController {

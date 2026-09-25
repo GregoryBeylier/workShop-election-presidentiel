@@ -1,6 +1,7 @@
 package fr.election.api.repository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,11 +15,14 @@ import jakarta.persistence.LockModeType;
 
 public interface IsoloirRepository extends JpaRepository<Isoloir, Integer> {
 
-	// Verrou sur l'isoloir : deux votants qui scannent le même isoloir en même temps
+	// Verrou sur l'isoloir : deux votants qui tapent le code du même isoloir en même temps
 	// ne peuvent pas ouvrir tous les deux un vote sur sa borne
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select i from Isoloir i where i.idIsoloir = :idIsoloir")
 	Optional<Isoloir> findByIdForUpdate(@Param("idIsoloir") Integer idIsoloir);
+
+	// Candidats pour un code court tapé par le votant
+	List<Isoloir> findByActifTrue();
 
 	// La borne s'identifie par sa clé : on la retrouve par l'empreinte, jamais par un numéro qu'elle enverrait
 	Optional<Isoloir> findByCleBorneHash(String cleBorneHash);

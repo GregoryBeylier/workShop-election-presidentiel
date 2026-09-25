@@ -2,9 +2,9 @@
 lacamarche1
 23
 
-## ⏳ À faire avant le jour J : isoloirs (check-in QR + borne ESP32)
+## ⏳ À faire avant le jour J : isoloirs (code à 6 chiffres + borne ESP32)
 
-> Un isoloir = **un écran** qui affiche le QR tournant + **une borne ESP32** où le votant vote avec les boutons.
+> Un isoloir = **un écran** qui affiche un code à 6 chiffres (change toutes les 30 s) + **une borne ESP32** où le votant vote avec les boutons.
 > Tables du check-in déjà créées sur la base de prod (le 24/09/2026). Détails :
 > [qr-code/sql/guide-neon.sql](qr-code/sql/guide-neon.sql), [qr-code/README.md](qr-code/README.md#installation-dun-poste-isoloir),
 > [borne/API.md](borne/API.md) et [qr-code/SECURITE.md](qr-code/SECURITE.md).
@@ -28,7 +28,7 @@ Pour **chaque** isoloir, le jour de l'installation :
    veille désactivée, zoom à 100 %.
 6. **Vérifier** : l'écran affiche « Connecté », la borne a ses LED éteintes, et l'onglet **Isoloirs** affiche
    « Borne en ligne » et « Libre » (mis à jour toutes les 3 s).
-   Ne pas faire de vrai vote de test sur la prod : il consommerait un droit de vote. Le parcours complet (scan, duels,
+   Ne pas faire de vrai vote de test sur la prod : il consommerait un droit de vote. Le parcours complet (code, duels,
    « Merci ») se teste avant, sur une branche Neon de test.
 7. **Ne conserver les clés nulle part** (ni dans le dépôt, ni dans un message) : la base n'en garde que l'empreinte.
 

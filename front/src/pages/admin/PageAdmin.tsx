@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LayoutDashboard, QrCode, Users, UserRoundCheck } from "lucide-react";
+import { LayoutDashboard, Users, UserRoundCheck, Vote } from "lucide-react";
 import { getCandidatsAdmin, getStats } from "../../api/admin";
 import { usePolling } from "../../hooks/usePolling";
 import Alerte from "../../components/ui/Alerte";
@@ -22,7 +22,7 @@ const onglets: Onglet<IdOnglet>[] = [
   },
   { id: "inscriptions", label: "Inscriptions", icon: Users },
   { id: "candidats", label: "Candidats", icon: UserRoundCheck },
-  { id: "isoloirs", label: "Isoloirs", icon: QrCode },
+  { id: "isoloirs", label: "Isoloirs", icon: Vote },
 ];
 
 // Rafraîchissement des statistiques en temps réel
