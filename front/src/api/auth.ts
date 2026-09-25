@@ -1,3 +1,5 @@
+import { API_URL } from "./config";
+
 export interface LoginResponse {
   token: string;
   email: string;
@@ -16,7 +18,7 @@ export async function login(
 ): Promise<LoginResponse> {
   let res: Response;
   try {
-    res = await fetch("/api/auth/login", {
+    res = await fetch(`${API_URL}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, motDePasse }),
@@ -124,7 +126,7 @@ export async function changerMotDePasse(
 ): Promise<LoginResponse> {
   let res: Response;
   try {
-    res = await fetch("/api/auth/changer-mot-de-passe", {
+    res = await fetch(`${API_URL}/auth/changer-mot-de-passe`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

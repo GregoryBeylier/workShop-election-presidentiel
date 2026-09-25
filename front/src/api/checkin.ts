@@ -1,3 +1,4 @@
+import { API_URL } from "./config";
 import { apiFetch, ApiError } from "./client";
 
 /**
@@ -57,7 +58,7 @@ export function commencerVoteEnLigne() {
 export async function getQrIsoloir(idIsoloir: string, cleIsoloir: string): Promise<QrIsoloir> {
   let res: Response;
   try {
-    res = await fetch(`/api/booths/${idIsoloir}/current-qr`, {
+    res = await fetch(`${API_URL}/booths/${idIsoloir}/current-qr`, {
       headers: { "X-Isoloir-Cle": cleIsoloir },
       cache: "no-store",
     });

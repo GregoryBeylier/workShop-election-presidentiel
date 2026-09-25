@@ -1,3 +1,4 @@
+import { API_URL } from "./config";
 import { getValidToken, logout } from "./auth";
 
 /** Erreur d'appel API, avec le code HTTP pour que l'appelant puisse réagir (409, 404...). */
@@ -23,7 +24,7 @@ export async function apiFetch<T>(
   const multipart = options.body instanceof FormData;
   let res: Response;
   try {
-    res = await fetch(`/api${path}`, {
+    res = await fetch(`${API_URL}${path}`, {
       method: options.method ?? "GET",
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),

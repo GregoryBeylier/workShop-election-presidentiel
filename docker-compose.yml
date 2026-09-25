@@ -33,7 +33,11 @@ services:
       - "8080:8080"
 
   front:
-    build: ./front
+    build:
+      context: ./front
+      args:
+        # Le navigateur appelle l'API via nginx sur 8081, qui relaie vers back:8080
+        VITE_API_URL: http://localhost:8081/api
     container_name: vote-front
     restart: unless-stopped
     depends_on:

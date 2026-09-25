@@ -6,6 +6,9 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
+# URL de l'API intégrée au build (vide = /api, relayé par nginx)
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 # --- Étape 2 : image finale, on sert le build avec nginx ---
