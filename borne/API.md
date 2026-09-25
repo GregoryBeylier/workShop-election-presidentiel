@@ -161,6 +161,7 @@ La contrainte `UNIQUE` sur `bulletin.id_inscription` reste le dernier filet cont
 | `401` | Clé absente ou inconnue | Hors service |
 | `404` | Jeton inconnu pour cette borne | Signal d'erreur, se reverrouille |
 | `409` | Ce n'est pas le duel attendu | Signal d'erreur, se reverrouille. Le B2 suivant renvoie le bon duel |
+| `410` | Le scrutin a été clos pendant le vote | Signal d'erreur, se reverrouille |
 | erreur réseau / `5xx` | — | **Retente** la même requête (5 fois, toutes les 3 s), puis se reverrouille. Le B2 suivant la remet au bon duel |
 
 ---
@@ -258,7 +259,8 @@ CREATE TABLE choix_provisoire (
 - **Vote ouvert sur une borne** = un `emargement_isoloir` de cet isoloir dont l'inscription n'a pas encore de `bulletin`.
 - **Borne occupée** : le check-in verrouille la ligne `isoloir` (`SELECT … FOR UPDATE`) pour que deux votants qui scannent en même temps ne l'ouvrent pas tous les deux.
 - **Heure en UTC** : `derniere_activite_borne` est écrite avec le `Clock` du back (`CheckinConfig`, UTC), comme le check-in qui la compare. Toujours utiliser ce bean, jamais `LocalDateTime.now()` sans horloge.
-- **Déjà côté check-in** (fait) : colonnes et entité `Isoloir`, `EmargementIsoloirRepository.existsVoteOuvert`, refus `booth_offline` / `booth_busy`, statut `voted_booth`. SQL : `qr-code/sql/migration-borne.sql`.
+- **Fait** : check-in (refus `booth_offline` / `booth_busy`, statut `voted_booth`), routes B2 et B3 (`fr.election.api.borne` : `BorneController`, `BorneService`, entité `ChoixProvisoire`), back office admin des isoloirs. Tests : `BorneTests`. SQL : `qr-code/sql/migration-borne.sql` puis `migration-borne-choix.sql`.
+- Code `410` sur B3 : le scrutin a été clos pendant le vote.
 - **Un seul verrou contre le double vote** : check-in, vote en ligne et dernier duel de la borne passent tous par `findPeriodeOuverteForUpdate` sur l'inscription.
 
 ---

@@ -14,34 +14,25 @@ lacamarche1
 
 Pour **chaque** isoloir, le jour de l'installation :
 
-1. **Générer deux clés** aléatoires dans un terminal, une pour l'écran et une pour la borne :
-   `openssl rand -hex 24` (deux fois). Des clés différentes par isoloir ; ne jamais réutiliser les clés de démo
-   ou de test (`cle-test-isoloir`, `cle-test-borne`, `tablette-isoloir-…-demo`).
-2. **Créer l'isoloir** dans Neon → SQL Editor, sur la branche **prod** (étape 4 du guide), puis noter l'`id_isoloir` renvoyé :
-   ```sql
-   INSERT INTO isoloir (libelle, cle_hmac, cle_tablette_hash, cle_borne_hash)
-   VALUES ('Isoloir 1', encode(sha256(gen_random_uuid()::text::bytea), 'hex'),
-           encode(sha256('<clé écran>'::bytea), 'hex'),
-           encode(sha256('<clé borne>'::bytea), 'hex'))
-   RETURNING id_isoloir;
-   ```
-3. **Flasher la borne** : dans `borne/firmware/IsoloireConnecte/config.h`, le Wi-Fi de l'événement, `SERVEUR` = l'IP du
-   serveur sur ce réseau (jamais `localhost`) et `CLE_BORNE` = la clé borne. `config.h` n'est jamais commité.
-4. **Ouvrir la page sur l'écran**, en mode kiosque :
-   `https://<adresse-de-l-appli>/isoloir/<id_isoloir>?cle=<clé écran>`, puis **effacer l'historique** du navigateur (l'URL contenait la clé).
+1. **Créer l'isoloir dans l'appli** : se connecter en admin → **Admin** → onglet **Isoloirs** → **Créer l'isoloir**.
+   Le serveur génère les deux clés (écran et borne) et les affiche **une seule fois** : l'adresse de l'écran et les
+   lignes de `config.h` de la borne, avec un bouton « Copier ». Rien à taper en SQL.
+   (Sans l'appli : la requête `INSERT INTO isoloir …` de l'étape 4 de `guide-neon.sql`, avec deux clés `openssl rand -hex 24`.)
+2. Ne jamais réutiliser les clés de démo ou de test (`cle-test-isoloir`, `cle-test-borne`, `tablette-isoloir-…-demo`).
+3. **Flasher la borne** : dans `borne/firmware/IsoloireConnecte/config.h`, coller les lignes `SERVEUR` et `CLE_BORNE`
+   données par l'onglet Isoloirs (`SERVEUR` = l'IP du serveur sur le Wi-Fi, jamais `localhost`), et le Wi-Fi de
+   l'événement. `config.h` n'est jamais commité.
+4. **Ouvrir sur l'écran** l'adresse donnée par l'onglet Isoloirs, en mode kiosque, puis **effacer l'historique** du
+   navigateur (l'URL contenait la clé).
 5. **Installer le poste** selon la checklist : serveur sur une autre machine, pas de clavier ni de souris dans l'isoloir,
    veille désactivée, zoom à 100 %.
-6. **Vérifier** : l'écran affiche « Connecté », et la borne est en ligne (LED éteintes, pas de clignotement) :
-   ```sql
-   SELECT id_isoloir, libelle,
-          derniere_activite_borne > (now() AT TIME ZONE 'UTC') - INTERVAL '10 seconds' AS borne_en_ligne
-   FROM isoloir;
-   ```
+6. **Vérifier** : l'écran affiche « Connecté », la borne a ses LED éteintes, et l'onglet **Isoloirs** affiche
+   « Borne en ligne » et « Libre » (mis à jour toutes les 3 s).
    Ne pas faire de vrai vote de test sur la prod : il consommerait un droit de vote. Le parcours complet (scan, duels,
    « Merci ») se teste avant, sur une branche Neon de test.
 7. **Ne conserver les clés nulle part** (ni dans le dépôt, ni dans un message) : la base n'en garde que l'empreinte.
 
-Isoloir perdu ou manipulé : `UPDATE isoloir SET actif = FALSE WHERE id_isoloir = <id>;`, puis recréer un isoloir avec de nouvelles clés
-et reflasher la borne.
+Isoloir perdu ou manipulé : bouton **Désactiver** dans l'onglet Isoloirs, puis créer un nouvel isoloir et reflasher
+la borne avec ses nouvelles clés.
 
 ⚠️ Ne jamais lancer le back avec le profil `demo` sur la base de prod : il crée l'admin `root@demo.fr` / `root`.

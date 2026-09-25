@@ -7,6 +7,7 @@
 --
 --   Étape 1  : créer les tables            → branche de test ET prod (une seule fois par base)
 --   Étape 1b : colonnes de la borne ESP32  → branche de test ET prod (une seule fois par base)
+--   Étape 1c : table choix_provisoire      → branche de test ET prod (une seule fois par base)
 --   Étape 2  : vérifier les tables         → branche de test ET prod
 --   Étape 3  : données de test             → branche de test UNIQUEMENT
 --   Étape 4  : isoloirs réels              → prod (le jour de l'installation)
@@ -75,6 +76,20 @@ ALTER TABLE journal_checkin DROP CONSTRAINT chk_resultat_checkin;
 ALTER TABLE journal_checkin ADD CONSTRAINT chk_resultat_checkin CHECK (resultat IN
 	('success', 'already_voted', 'expired_token', 'invalid_token', 'not_registered', 'booth_offline', 'booth_busy'));
 COMMIT;
+
+
+-- =============================================================================
+-- ÉTAPE 1c : choix de la borne duel par duel (branche de test ET prod, une seule fois)
+-- =============================================================================
+-- Même contenu que migration-borne-choix.sql. À faire AVANT de démarrer une version du back
+-- qui contient les routes /api/borne. Si « relation "choix_provisoire" already exists » : c'est déjà fait.
+
+CREATE TABLE choix_provisoire (
+	id_emargement INTEGER NOT NULL REFERENCES emargement_isoloir (id_emargement),
+	id_affrontement INTEGER NOT NULL REFERENCES affrontement (id_affrontement),
+	choix VARCHAR(10) NOT NULL CHECK (choix IN ('GAUCHE', 'DROITE', 'BLANC')),
+	PRIMARY KEY (id_emargement, id_affrontement)
+);
 
 
 -- =============================================================================
@@ -176,7 +191,10 @@ ORDER BY j.scanne_le DESC
 LIMIT 50;
 
 -- Refaire un test avec le même compte (BRANCHE DE TEST UNIQUEMENT) :
--- supprime son émargement pour qu'il puisse scanner à nouveau
+-- supprime ses choix en cours sur la borne puis son émargement, pour qu'il puisse scanner à nouveau
+DELETE FROM choix_provisoire WHERE id_emargement IN (
+	SELECT e.id_emargement FROM emargement_isoloir e JOIN inscription i USING (id_inscription)
+	JOIN utilisateur u USING (id_utilisateur) WHERE u.email = 'test@mydigitalschool.fr');
 DELETE FROM emargement_isoloir WHERE id_inscription IN (
 	SELECT i.id_inscription FROM inscription i JOIN utilisateur u USING (id_utilisateur)
 	WHERE u.email = 'test@mydigitalschool.fr');
@@ -200,6 +218,7 @@ COMMIT;
 -- ne démarrera plus sur cette base tant que l'étape 1 n'est pas refaite.
 
 -- BEGIN;
+-- DROP TABLE choix_provisoire;
 -- DROP TABLE journal_checkin;
 -- DROP TABLE emargement_isoloir;
 -- DROP TABLE isoloir;
